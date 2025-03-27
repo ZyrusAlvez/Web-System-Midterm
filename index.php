@@ -1,143 +1,120 @@
-<?php
-
+<?php 
+session_start();
 include("connections.php");
 
-$name = $address = $email = $password = $cpassword =  "";
-$nameErr = $addressErr = $emailErr = $passwordErr = $cpasswordErr = "" ; 
+$errorMessage = ""; // Store the error message
 
-if($_SERVER["REQUEST_METHOD"] == "POST" ){
-	
-	if(empty($_POST["name"])){
-		$nameErr = "Name is required!";
-	}else{
-		$name = $_POST["name"];
-	}
-	
-	if(empty($_POST["address"])){
-		$addressErr = "Address is required!";
-	}else{
-		$address = $_POST["address"];
-	}
-	
-	if(empty($_POST["email"])){
-		$emailErr = "Email is required!";
-	}else{
-		$email = $_POST["email"];
-	}
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $email = trim($_POST["email"]);
+    $password = trim($_POST["password"]);
 
-	if (empty($_POST["password"])) {
-        $passwordErr = "Password is required";
+    $stmt = $connections->prepare("SELECT * FROM mytbl WHERE email = ?");
+    $stmt->bind_param("s", $email);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if ($result->num_rows > 0) {
+        $row = $result->fetch_assoc();
+        $db_password = $row["password"];
+        $db_account_type = $row["account_type"];
+
+        if ($password === $db_password) {
+            $_SESSION["email"] = $email;
+            $_SESSION["account_type"] = $db_account_type;
+            
+            if ($db_account_type == "1") {
+                header("Location: admin/index.php");
+                exit();
+            } else {
+                header("Location: user/index.php");
+                exit();
+            }
+        } else {
+            $errorMessage = "Incorrect password!";
+        }
     } else {
-        $password = $_POST["password"];
+        $errorMessage = "Email is not registered!";
     }
-
-    if (empty($_POST["cpassword"])) {
-        $cpasswordErr = "Confirm Password is required";
-    } else {
-        $cpassword = $_POST["cpassword"];
-    }
-
-	if($name && $address && $email && $password && $cpassword){
-
-		$check_email = mysqli_query($connections, "SELECT * FROM mytbl WHERE email='$email'");
-		$check_email_row = mysqli_num_rows($check_email);
-
-		if($check_email_row > 0){
-			$emailErr = "Email is already registered!";
-		}else{
-			$query = mysqli_query($connections, "INSERT INTO mytbl (name,address,email,password,account_type) VALUES ('$name','$address','$email','$cpassword', '2')");
-			echo "<script language = 'javascript'>alert('New record has been inserted!')</script>";
-			echo "<script>window.location.href='index.php'</script>";
-		}
-		
-		// $query = mysqli_query($connections, "INSERT INTO mytbl(name,address,email) VALUES('$name','$address','$email')");
-		// echo "<script language='javascript'>alert('New Record has been inserted!')</script>";
-		// echo "<script>window.location.href='index.php';</script>";
-	}
 }
 ?>
-
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Document</title>
-</head>
-<body class="flex flex-col items-center justify-center mt-8 gap-4 w-full">
-
-	<?php include("nav.php"); ?>
-	
-	<form method="POST" action="" class="flex flex-col gap-2 w-[30%]">	
-		<input type="text" name="name" value="<?php echo $name; ?>" class="rounded-xl border-[1.5px] border-gray-600 outline-none py-2 pl-2" placeholder="Name"> 
-		<span class="text-red-900"><?php echo $nameErr; ?></span>
-		<input type="text" name="address" value="<?php echo $address; ?>" class="rounded-xl border-[1.5px] border-gray-600 outline-none py-2 pl-2" placeholder="Address"> 
-		<span class="text-red-900"><?php echo $addressErr; ?></span>
-		<input type="text" name="email" value="<?php echo $email; ?>" class="rounded-xl border-[1.5px] border-gray-600 outline-none py-2 pl-2" placeholder="Email"> 
-		<span class="text-red-900"><?php echo $emailErr; ?></span>
-		<input type="password" name = "password" value = "<?php echo $password;?>" class="rounded-xl border-[1.5px] border-gray-600 outline-none py-2 pl-2" placeholder="Password">
-        <span class= "text-red-900"> <?php echo $passwordErr ;?></span>
-    	<input type="password" name = "cpassword" value = "<?php echo $cpassword;?>" class="rounded-xl border-[1.5px] border-gray-600 outline-none py-2 pl-2" placeholder="Confirm Password">
-        <span class= "text-red-900"> <?php echo $cpasswordErr ;?></span>
-
-		<input type="submit" value="Submit" class="rounded-xl border-[1.5px] border-gray-600 outline-none bg-black text-white py-1 font-bold"> 
-	</form>
-
-	<hr class="border-[1px] border-black w-[95%] rounded-full">
-
-	<?php
-
-		$view_query = mysqli_query($connections, "SELECT * FROM mytbl");
-
-		
-		echo "<table class='grid gap-2'>";
-		echo "<tr>
-				<td class='px-4 py-2 text-lg text-white bg-black text-center font-bold'>Name</td>
-				<td class='px-4 py-2 text-lg text-white bg-black text-center font-bold'>Address</td>
-				<td class='px-4 py-2 text-lg text-white bg-black text-center font-bold'>Email</td>
-	
-				<td class='px-4 py-2 text-lg text-white bg-black text-center font-bold'>Option</td>
-	
-			</tr>";
-
-		while($row = mysqli_fetch_assoc($view_query)){
-
-			$user_id = $row["id"];
-	
-			$db_name = $row["name"];
-			$db_address = $row["address"];
-			$db_email = $row["email"];
-	
-			echo "<tr>
-					<td class='px-4 py-2 border border-black'>$db_name</td>
-					<td class='px-4 py-2 border border-black'>$db_address</td>
-					<td class='px-4 py-2 border border-black'>$db_email</td>
-	
-					<td class='px-4 py-2 border border-black'>
-					<a href='edit.php?id=$user_id' class='rounded-full bg-black text-white px-2 py-1'>🖊 Update</a>
-					&nbsp;
-					<a href='confirm_delete.php?id=$user_id' class='rounded-full bg-black text-white px-2 py-1'>🗑 Delete</a>
-					</td>
-					</tr>";
-		}
-		echo "</table>";
-	?>
-
-	<hr>
-
-	<?php 
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
     
-    $Paul = "Paul";
-    $Mica = "Mica";
-    $Kaye = "Kaye";
-    $names = array($Paul, $Mica, $Kaye);
-    foreach($names as $display_names){
-        echo $display_names . "<br>";
-    }
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
 
-	?>
+    <!-- FontAwesome -->
+    <script src="https://kit.fontawesome.com/d5b7a13861.js" crossorigin="anonymous"></script>
 
-	<script src="https://cdn.tailwindcss.com"></script>
+    <!-- Toastr.js for Notifications -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+</head>
+<body class="w-full h-screen flex items-center justify-evenly bg-[#ee4d2d]">
+    <div class="flex flex-col gap-8 items-center justify-center">
+        <img src="assets/logo.webp" class="w-80 h-80">
+        <div class="flex flex-col">
+            <h1 class="text-white text-2xl text-center">The leading online shopping platform</h1>
+            <h1 class="text-white text-2xl text-center">in the Whole Wide Universe</h1>
+        </div>
+    </div>
+    
+    <form class="bg-white w-[400px] h-auto flex flex-col gap-y-6 items-center py-4" action="" method="POST">
+        <h1 class="text-start w-[340px] text-xl">Log In</h1>
+
+        <input name="email" class="outline-none border-gray-300 px-3 py-2 border w-[338px]" placeholder="Email" required>
+
+        <div class="relative w-[338px]">
+            <input id="password" name="password" class="outline-none border-gray-300 px-3 py-2 border w-full" placeholder="Password" type="password" required>
+            <i id="eyeOpen" class="fa-solid fa-eye text-[#ee4d2d] absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer hidden"></i>
+            <i id="eyeClosed" class="fa-solid fa-eye-slash text-[#ee4d2d] absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer"></i>
+        </div>
+
+        <input type="submit" class="w-[340px] bg-[#ee4d2d] py-[10px] text-white" value="LOG IN">
+        <h1 class="text-gray-400">New to Chopee? <a class="text-[#ee4d2d] font-bold" href="register.php">Sign Up</a></h1>
+    </form>
+
+    <!-- jQuery (required for Toastr.js) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    
+    <!-- Toastr.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+    <!-- Toastr Configuration -->
+    <script>
+        toastr.options = {
+            "closeButton": true,
+            "progressBar": true,
+            "positionClass": "toast-top-right",
+            "timeOut": "3000"
+        };
+
+        <?php if (!empty($errorMessage)) : ?>
+            toastr.error("<?= $errorMessage ?>");
+        <?php endif; ?>
+    </script>
+
+    <!-- Password Toggle -->
+    <script>
+        const passwordInput = document.getElementById('password');
+        const eyeOpen = document.getElementById('eyeOpen');
+        const eyeClosed = document.getElementById('eyeClosed');
+
+        eyeClosed.addEventListener('click', () => {
+            passwordInput.type = 'text';
+            eyeClosed.classList.add('hidden');
+            eyeOpen.classList.remove('hidden');
+        });
+
+        eyeOpen.addEventListener('click', () => {
+            passwordInput.type = 'password';
+            eyeOpen.classList.add('hidden');
+            eyeClosed.classList.remove('hidden');
+        });
+    </script>
 </body>
 </html>
