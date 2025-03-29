@@ -36,13 +36,13 @@ if (isset($_SESSION['admin_logged_in'])) {
     </div>
 
     <div class="flex flex-col gap-4 text-start w-full items-start ml-12">
-      <div class="flex gap-4 items-center text-start hover:cursor-pointer font-bold text-2xl">
-        <i class="fa-solid fa-list-check text-white"></i>
-        <a href="index.php" class="text-white">Products</a>
-      </div>
       <div class="flex gap-4 items-center text-start hover:cursor-pointer">
+        <i class="fa-solid fa-list-check text-white"></i>
+        <a href="index.php" class="text-white text-xl">Products</a>
+      </div>
+      <div class="flex gap-4 items-center text-start hover:cursor-pointer font-bold text-2xl">
         <i class="fa-solid fa-cart-shopping text-white"></i>
-        <a href="orders.php" class="text-white text-xl">Orders</a>
+        <a href="orders.php" class="text-white">Orders</a>
       </div>
       <div class="flex gap-4 items-center text-start hover:cursor-pointer">
         <i class="fa-solid fa-users text-white"></i>

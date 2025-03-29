@@ -8,7 +8,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $email = trim($_POST["email"]);
     $password = trim($_POST["password"]);
 
-    $stmt = $connections->prepare("SELECT * FROM mytbl WHERE email = ?");
+    $stmt = $connections->prepare("SELECT * FROM users WHERE email = ?");
     $stmt->bind_param("s", $email);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -56,7 +56,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 </head>
 <body class="w-full h-screen flex items-center justify-evenly bg-[#ee4d2d]">
     <div class="flex flex-col gap-8 items-center justify-center">
-        <img src="assets/logo.webp" class="w-80 h-80">
+        <img src="assets/logo_w_name.webp" class="w-80 h-80">
         <div class="flex flex-col">
             <h1 class="text-white text-2xl text-center">The leading online shopping platform</h1>
             <h1 class="text-white text-2xl text-center">in the Whole Wide Universe</h1>
