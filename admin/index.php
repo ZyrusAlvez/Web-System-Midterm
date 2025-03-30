@@ -399,14 +399,13 @@ if ($selected_category == 'all') {
 
     <!-- Products Table -->
     <div class="bg-white rounded shadow-md overflow-hidden">
-      <div class="grid grid-cols-12 gap-2 bg-[#ee4d2d] p-4 font-semibold text-white text-sm uppercase">
+      <div class="grid grid-cols-11 gap-2 bg-[#ee4d2d] p-4 font-semibold text-white text-sm uppercase text-center">
         <div class="col-span-1">ID</div>
-        <div class="col-span-2">Image</div>
+        <div class="col-span-1">Image</div>
         <div class="col-span-2">Name</div>
         <div class="col-span-1">Price</div>
         <div class="col-span-1">Qty</div>
-        <div class="col-span-1">Category</div>
-        <div class="col-span-2">Description</div>
+        <div class="col-span-3">Description</div>
         <div class="col-span-2">Actions</div>
       </div>
       
@@ -556,21 +555,20 @@ if ($selected_category == 'all') {
 // Helper function to display product row and edit form
 function displayProductRow($product, $categories) {
 ?>
-  <div class="grid grid-cols-12 gap-2 p-4 items-center border-b border-gray-200 hover:bg-gray-50 product-row" id="product-<?php echo $product['id']; ?>">
-    <div class="col-span-1"><?php echo $product['id']; ?></div>
-    <div class="col-span-2">
+  <div class="grid grid-cols-11 gap-2 p-4 items-center border-b border-gray-200 hover:bg-gray-50 product-row" id="product-<?php echo $product['id']; ?>">
+    <div class="col-span-1 text-center"><?php echo $product['id']; ?></div>
+    <div class="col-span-1">
       <img src="../<?php echo $product['image']; ?>" alt="<?php echo $product['name']; ?>" class="w-16 h-16 object-cover rounded">
     </div>
     <div class="col-span-2 font-medium"><?php echo $product['name']; ?></div>
-    <div class="col-span-1">$<?php echo number_format($product['price'], 2); ?></div>
-    <div class="col-span-1"><?php echo $product['quantity']; ?></div>
-    <div class="col-span-1"><?php echo $product['category']; ?></div>
-    <div class="col-span-2">
+    <div class="col-span-1 text-center">₱<?php echo number_format($product['price'], 2); ?></div>
+    <div class="col-span-1 text-center"><?php echo $product['quantity']; ?></div>
+    <div class="col-span-3">
       <div class="max-w-xs overflow-hidden text-ellipsis whitespace-nowrap" title="<?php echo htmlspecialchars($product['description']); ?>">
         <?php echo htmlspecialchars(substr($product['description'], 0, 50)) . (strlen($product['description']) > 50 ? '...' : ''); ?>
       </div>
     </div>
-    <div class="col-span-2 flex gap-2">
+    <div class="col-span-2 flex gap-2 items-center justify-center">
       <button type="button" class="px-3 py-1 bg-blue-100 text-blue-600 rounded hover:bg-blue-200 flex items-center edit-btn" data-id="<?php echo $product['id']; ?>">
         <i class="fa-solid fa-pen-to-square mr-1"></i> Edit
       </button>
