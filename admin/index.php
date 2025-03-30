@@ -296,7 +296,7 @@ if ($selected_category == 'all') {
 </head>
 <body class="w-full h-screen flex">
   
-  <aside class="flex flex-col gap-8 items-center justify-between w-[300px] h-full bg-[#ee4d2d]">
+  <aside class="flex flex-col gap-8 items-center justify-between w-[300px] h-full bg-[#ee4d2d] sm:hidden md:flex">
     <div class="flex items-center justify-center gap-2 mt-8">
       <img src="../assets/logo.jpg" class="w-[70px] h-[70px]">
       <h1 class="text-white text-3xl mt-[10px]">Chopee</h1>
