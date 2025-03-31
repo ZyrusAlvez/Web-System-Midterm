@@ -2,7 +2,7 @@
 include("connections.php");
 
 $name = $address = $email = $password = $cpassword = "";
-$cpasswordErr = "";
+$errorMessage = ""; // Store the error message
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Sanitize input
@@ -14,10 +14,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     // Validate password match
     if ($password !== $cpassword) {
-        $cpasswordErr = "Passwords do not match!";
+        $errorMessage = "Passwords do not match!";
     }
 
-    if (empty($cpasswordErr)) {
+    if (empty($errorMessage)) {
         // Check if email exists
         $stmt = $connections->prepare("SELECT * FROM users WHERE email = ?");
         $stmt->bind_param("s", $email);
@@ -25,8 +25,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $result = $stmt->get_result();
         
         if ($result->num_rows > 0) {
-            $cpasswordErr = "Email is already registered!";
+            $errorMessage = "Email is already registered!";
         } else {
+            // Insert user data here (commented out as it was missing in original)
+            /*
+            $stmt = $connections->prepare("INSERT INTO users (name, address, email, password, account_type) VALUES (?, ?, ?, ?, '0')");
+            $stmt->bind_param("ssss", $name, $address, $email, $password);
+            $stmt->execute();
+            */
+            
             // Redirect if credentials are valid
             header("Location: user/index.php");
             exit();
@@ -40,50 +47,209 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign Up</title>
-
+    <title>Chopee - Sign Up</title>
+    
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'chopee': {
+                            '50': '#fff0eb',
+                            '100': '#ffe4d9',
+                            '200': '#ffc9b3',
+                            '300': '#ffa985',
+                            '400': '#ff7e4c',
+                            '500': '#ee4d2d',
+                            '600': '#d63b1c',
+                            '700': '#b22e15',
+                            '800': '#8c2714',
+                            '900': '#6e2013'
+                        }
+                    },
+                    fontFamily: {
+                        'sans': ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif']
+                    },
+                    boxShadow: {
+                        'chopee': '0 4px 12px rgba(238, 77, 45, 0.15)'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome -->
     <script src="https://kit.fontawesome.com/d5b7a13861.js" crossorigin="anonymous"></script>
 
-    <!-- Toastr.js -->
+    <!-- Toastr.js for Notifications -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
 </head>
-<body class="w-full h-screen flex items-center justify-evenly bg-[#ee4d2d]">
-    <div class="flex flex-col gap-8 items-center justify-center">
-        <img src="assets/logo_w_name.webp" class="w-80 h-80">
-        <div class="flex flex-col">
-            <h1 class="text-white text-2xl text-center">The leading online shopping platform</h1>
-            <h1 class="text-white text-2xl text-center">in the Whole Wide Universe</h1>
+<body class="bg-gray-100 font-sans h-screen">
+    <div class="flex flex-col lg:flex-row h-screen bg-chopee-500">
+        <!-- Left side - Background and branding -->
+        <div class="lg:w-1/2 flex items-center justify-center p-6 lg:p-12 relative">
+            <div class="flex flex-col gap-6 items-center justify-center z-10 text-center">
+                <img src="assets/logo_w_name.webp" class="w-52 h-52 lg:w-64 lg:h-64 mb-4 transition-all duration-300 hover:scale-105">
+                <div class="flex flex-col">
+                    <h1 class="text-white text-xl lg:text-2xl font-medium">The leading online shopping platform</h1>
+                    <h1 class="text-white text-xl lg:text-2xl font-medium">in the Whole Wide Universe</h1>
+                </div>
+                
+                <!-- Benefits -->
+                <div class="hidden lg:flex flex-col gap-4 mt-4 text-white">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-white/20 rounded-full p-2">
+                            <i class="fas fa-shipping-fast text-white"></i>
+                        </div>
+                        <span>Fast & Reliable Shipping</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="bg-white/20 rounded-full p-2">
+                            <i class="fas fa-shield-alt text-white"></i>
+                        </div>
+                        <span>Secure Payment Options</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="bg-white/20 rounded-full p-2">
+                            <i class="fas fa-tag text-white"></i>
+                        </div>
+                        <span>Exclusive Deals & Discounts</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right side - Registration form -->
+        <div class="lg:w-1/2 flex items-center justify-center p-6 lg:p-12 bg-chopee-500">
+            <div class="bg-white w-full max-w-md rounded-lg shadow-lg p-8">
+                <div class="flex justify-between items-center mb-8">
+                    <h1 class="text-2xl font-bold text-gray-800">Create Account</h1>
+                    <div class="text-chopee-500">
+                        <i class="fas fa-user-plus text-3xl"></i>
+                    </div>
+                </div>
+                
+                <form class="flex flex-col gap-5" action="" method="POST">
+                    <!-- Name Field -->
+                    <div class="flex flex-col gap-2">
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                <i class="fas fa-user text-gray-400"></i>
+                            </div>
+                            <input 
+                                id="name" 
+                                name="name" 
+                                type="text" 
+                                value="<?= htmlspecialchars($name); ?>"
+                                class="w-full py-3 pl-10 pr-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-chopee-500 focus:border-chopee-500 transition-all duration-200" 
+                                placeholder="Enter your full name"
+                                required
+                            >
+                        </div>
+                    </div>
+                    
+                    <!-- Address Field -->
+                    <div class="flex flex-col gap-2">
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                <i class="fas fa-map-marker-alt text-gray-400"></i>
+                            </div>
+                            <input 
+                                id="address" 
+                                name="address" 
+                                type="text" 
+                                value="<?= htmlspecialchars($address); ?>"
+                                class="w-full py-3 pl-10 pr-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-chopee-500 focus:border-chopee-500 transition-all duration-200" 
+                                placeholder="Enter your address"
+                                required
+                            >
+                        </div>
+                    </div>
+                    
+                    <!-- Email Field -->
+                    <div class="flex flex-col gap-2">
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                <i class="fas fa-envelope text-gray-400"></i>
+                            </div>
+                            <input 
+                                id="email" 
+                                name="email" 
+                                value="<?= htmlspecialchars($email); ?>"
+                                class="w-full py-3 pl-10 pr-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-chopee-500 focus:border-chopee-500 transition-all duration-200" 
+                                placeholder="Enter your email"
+                                required
+                            >
+                        </div>
+                    </div>
+                    
+                    <!-- Password Field -->
+                    <div class="flex flex-col gap-2">
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                <i class="fas fa-lock text-gray-400"></i>
+                            </div>
+                            <input 
+                                id="password" 
+                                name="password" 
+                                type="password" 
+                                class="w-full py-3 pl-10 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-chopee-500 focus:border-chopee-500 transition-all duration-200" 
+                                placeholder="Create a password"
+                                required
+                            >
+                            <div class="absolute inset-y-0 right-0 flex items-center pr-3">
+                                <i class="togglePassword fas fa-eye-slash text-gray-400 cursor-pointer hover:text-chopee-500 transition-colors duration-200"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Confirm Password Field -->
+                    <div class="flex flex-col gap-2">
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                <i class="fas fa-lock text-gray-400"></i>
+                            </div>
+                            <input 
+                                id="confirm_password" 
+                                name="confirm_password" 
+                                type="password" 
+                                class="w-full py-3 pl-10 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-chopee-500 focus:border-chopee-500 transition-all duration-200" 
+                                placeholder="Confirm your password"
+                                required
+                            >
+                            <div class="absolute inset-y-0 right-0 flex items-center pr-3">
+                                <i class="togglePassword fas fa-eye-slash text-gray-400 cursor-pointer hover:text-chopee-500 transition-colors duration-200"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button 
+                        type="submit" 
+                        class="bg-chopee-500 text-white py-3 rounded-lg font-medium mt-2 transition-all duration-300 hover:bg-chopee-600 focus:outline-none focus:ring-2 focus:ring-chopee-500 focus:ring-offset-2 active:bg-chopee-700"
+                    >
+                        SIGN UP
+                    </button>
+                    
+                    <div class="flex items-center justify-center gap-2">
+                        <span class="text-gray-500">Already have an account?</span>
+                        <a href="index.php" class="text-chopee-500 font-medium hover:text-chopee-600 transition-colors duration-200">Log In</a>
+                    </div>
+                </form>
+
+            </div>
         </div>
     </div>
-    
-    <form class="bg-white w-[400px] h-auto flex flex-col gap-y-6 items-center py-4" action="" method="POST">
-      <h1 class="text-start w-[340px] text-xl">Sign Up</h1>
 
-      <input name="name" value="<?= htmlspecialchars($name); ?>" class="outline-none border-gray-300 px-3 py-2 border w-[338px]" placeholder="Name" required>
-
-      <input name="address" value="<?= htmlspecialchars($address); ?>" class="outline-none border-gray-300 px-3 py-2 border w-[338px]" placeholder="Address" required>
-
-      <input name="email" value="<?= htmlspecialchars($email); ?>" class="outline-none border-gray-300 px-3 py-2 border w-[338px]" placeholder="Email" required>
-
-      <div class="relative w-[338px]">
-          <input id="password" name="password" class="outline-none border-gray-300 px-3 py-2 border w-full" placeholder="Password" type="password" required>
-          <i class="togglePassword fa-solid fa-eye-slash text-[#ee4d2d] absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer"></i>
-      </div>
-
-      <div class="relative w-[338px]">
-          <input id="confirmPassword" name="confirm_password" class="outline-none border-gray-300 px-3 py-2 border w-full" placeholder="Confirm Password" type="password" required>
-          <i class="togglePassword fa-solid fa-eye-slash text-[#ee4d2d] absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer"></i>
-      </div>
-
-      <input type="submit" class="w-[340px] bg-[#ee4d2d] py-[10px] text-white" value="SIGN UP">
-      <h1 class="text-gray-400">Already have an account? <a class="text-[#ee4d2d] font-bold" href="index.php">Log In</a></h1>
-    </form>
-
-    <!-- jQuery (needed for Toastr.js) -->
+    <!-- jQuery (required for Toastr.js) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-
+    
     <!-- Toastr.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
 
@@ -96,8 +262,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             "timeOut": "3000"
         };
 
-        <?php if (!empty($cpasswordErr)) : ?>
-            toastr.error("<?= $cpasswordErr ?>");
+        <?php if (!empty($errorMessage)) : ?>
+            toastr.error("<?= $errorMessage ?>");
         <?php endif; ?>
     </script>
 
@@ -105,13 +271,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <script>
         document.querySelectorAll('.togglePassword').forEach(icon => {
             icon.addEventListener('click', () => {
-                let input = icon.previousElementSibling;
-                if (input.type === 'password') {
-                    input.type = 'text';
+                const input = icon.closest('div').querySelector('input');
+                const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+                input.setAttribute('type', type);
+                
+                // Toggle icon
+                if (type === 'text') {
                     icon.classList.remove('fa-eye-slash');
                     icon.classList.add('fa-eye');
                 } else {
-                    input.type = 'password';
                     icon.classList.remove('fa-eye');
                     icon.classList.add('fa-eye-slash');
                 }

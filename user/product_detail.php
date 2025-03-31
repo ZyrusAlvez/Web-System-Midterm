@@ -6,6 +6,173 @@ if (!isset($connections)) {
     die("Database connection error.");
 }
 
+// Check if user is logged in - using name directly from session
+$user_name = "Guest";
+$user_id = null;
+if (isset($_SESSION['name'])) {
+    $user_name = $_SESSION['name'];
+    // Assuming you have user_id in session
+    if (isset($_SESSION['user_id'])) {
+        $user_id = $_SESSION['user_id'];
+    }
+}
+
+// Handle checkout process
+if (isset($_POST['action']) && $_POST['action'] === 'checkout') {
+  // Make sure user is logged in
+  if ($user_id === null) {
+      echo json_encode(['success' => false, 'message' => 'Please login to checkout']);
+      exit;
+  }
+
+  // Fetch user's cart items
+  $cart_query = "SELECT product_id, quantity FROM cart WHERE user_id = ?";
+  $stmt = $connections->prepare($cart_query);
+  $stmt->bind_param("i", $user_id);
+  $stmt->execute();
+  $cart_result = $stmt->get_result();
+  
+  if ($cart_result->num_rows == 0) {
+      echo json_encode(['success' => false, 'message' => 'Your cart is empty']);
+      exit;
+  }
+  
+  // Begin transaction
+  $connections->begin_transaction();
+  
+  try {
+      // Create orders for each cart item
+      $order_query = "INSERT INTO orders (user_id, product_id, status) VALUES (?, ?, 'pending')";
+      $stmt = $connections->prepare($order_query);
+      
+      while ($cart_item = $cart_result->fetch_assoc()) {
+          $product_id = $cart_item['product_id'];
+          $quantity = $cart_item['quantity'];
+          
+          // Check if product has enough stock
+          $product_query = "SELECT quantity FROM products WHERE id = ?";
+          $product_stmt = $connections->prepare($product_query);
+          $product_stmt->bind_param("i", $product_id);
+          $product_stmt->execute();
+          $product_result = $product_stmt->get_result();
+          $product = $product_result->fetch_assoc();
+          
+          if ($product['quantity'] < $quantity) {
+              throw new Exception("Not enough stock for one or more products");
+          }
+          
+          // Update product quantity
+          $new_quantity = $product['quantity'] - $quantity;
+          $update_query = "UPDATE products SET quantity = ? WHERE id = ?";
+          $update_stmt = $connections->prepare($update_query);
+          $update_stmt->bind_param("ii", $new_quantity, $product_id);
+          $update_stmt->execute();
+          
+          // Insert order entry (one per product)
+          // Insert multiple entries based on quantity
+          for ($i = 0; $i < $quantity; $i++) {
+              $stmt->bind_param("ii", $user_id, $product_id);
+              $stmt->execute();
+          }
+      }
+      
+      // Clear the cart
+      $clear_cart_query = "DELETE FROM cart WHERE user_id = ?";
+      $clear_stmt = $connections->prepare($clear_cart_query);
+      $clear_stmt->bind_param("i", $user_id);
+      $clear_stmt->execute();
+      
+      // Commit the transaction
+      $connections->commit();
+      
+      echo json_encode(['success' => true, 'message' => 'Order placed successfully']);
+      exit;
+  } catch (Exception $e) {
+      // Rollback the transaction if an error occurs
+      $connections->rollback();
+      echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+      exit;
+  }
+}
+
+
+// Handle cart actions
+if (isset($_POST['action'])) {
+    // Make sure user is logged in
+    if ($user_id === null) {
+        echo json_encode(['success' => false, 'message' => 'Please login to add items to cart']);
+        exit;
+    }
+
+    $action = $_POST['action'];
+    
+    if ($action === 'add_to_cart') {
+        $product_id = $_POST['product_id'];
+        $quantity = isset($_POST['quantity']) ? intval($_POST['quantity']) : 1;
+        
+        // Check if product already in cart
+        $check_query = "SELECT * FROM cart WHERE user_id = ? AND product_id = ?";
+        $stmt = $connections->prepare($check_query);
+        $stmt->bind_param("ii", $user_id, $product_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        if ($result->num_rows > 0) {
+            // Update existing cart item
+            $cart_item = $result->fetch_assoc();
+            $new_quantity = $cart_item['quantity'] + $quantity;
+            
+            $update_query = "UPDATE cart SET quantity = ? WHERE cart_id = ?";
+            $stmt = $connections->prepare($update_query);
+            $stmt->bind_param("ii", $new_quantity, $cart_item['cart_id']);
+            $stmt->execute();
+        } else {
+            // Insert new cart item
+            $insert_query = "INSERT INTO cart (user_id, product_id, quantity) VALUES (?, ?, ?)";
+            $stmt = $connections->prepare($insert_query);
+            $stmt->bind_param("iii", $user_id, $product_id, $quantity);
+            $stmt->execute();
+        }
+        
+        echo json_encode(['success' => true, 'message' => 'Item added to cart']);
+        exit;
+    }
+    
+    if ($action === 'update_quantity') {
+        $cart_id = $_POST['cart_id'];
+        $quantity = intval($_POST['quantity']);
+        
+        if ($quantity <= 0) {
+            // Remove item if quantity is 0 or less
+            $delete_query = "DELETE FROM cart WHERE cart_id = ? AND user_id = ?";
+            $stmt = $connections->prepare($delete_query);
+            $stmt->bind_param("ii", $cart_id, $user_id);
+            $stmt->execute();
+        } else {
+            // Update quantity
+            $update_query = "UPDATE cart SET quantity = ? WHERE cart_id = ? AND user_id = ?";
+            $stmt = $connections->prepare($update_query);
+            $stmt->bind_param("iii", $quantity, $cart_id, $user_id);
+            $stmt->execute();
+        }
+        
+        echo json_encode(['success' => true, 'message' => 'Cart updated']);
+        exit;
+    }
+    
+    if ($action === 'remove_item') {
+        $cart_id = $_POST['cart_id'];
+        
+        $delete_query = "DELETE FROM cart WHERE cart_id = ? AND user_id = ?";
+        $stmt = $connections->prepare($delete_query);
+        $stmt->bind_param("ii", $cart_id, $user_id);
+        $stmt->execute();
+        
+        echo json_encode(['success' => true, 'message' => 'Item removed from cart']);
+        exit;
+    }
+}
+
 // Define categories
 $categories = [
     "all" => "All Categories",
@@ -40,6 +207,28 @@ if ($product_result->num_rows == 0) {
 }
 
 $product = $product_result->fetch_assoc();
+
+// Fetch user's cart items
+$cart_items = [];
+$cart_total = 0;
+$cart_count = 0;
+
+if ($user_id !== null) {
+    $cart_query = "SELECT c.cart_id, c.product_id, c.quantity, p.name, p.price, p.image 
+                  FROM cart c 
+                  JOIN products p ON c.product_id = p.id 
+                  WHERE c.user_id = ?";
+    $stmt = $connections->prepare($cart_query);
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    $cart_result = $stmt->get_result();
+    
+    while ($cart_item = $cart_result->fetch_assoc()) {
+        $cart_items[] = $cart_item;
+        $cart_total += $cart_item['price'] * $cart_item['quantity'];
+        $cart_count += $cart_item['quantity'];
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -49,485 +238,260 @@ $product = $product_result->fetch_assoc();
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?php echo $product['name']; ?> | Chopee</title>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-  <style>
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-      margin: 0;
-      padding: 0;
-      background-color: #f5f5f5;
-      color: #333;
-    }
-    
-    .header {
-      background-color: white;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-      padding: 12px 24px;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-    
-    .header-content {
-      max-width: 1200px;
-      margin: 0 auto;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    
-    .logo-container {
-      display: flex;
-      align-items: center;
-    }
-    
-    .logo-text {
-      color: #ee4d2d;
-      font-weight: 600;
-      font-size: 26px;
-      margin-left: 10px;
-    }
-    
-    .search-container {
-      flex: 1;
-      max-width: 600px;
-      margin: 0 24px;
-      position: relative;
-    }
-    
-    .search-input {
-      width: 100%;
-      padding: 10px 16px;
-      border-radius: 4px;
-      border: 2px solid #ee4d2d;
-      font-size: 14px;
-      outline: none;
-      transition: all 0.2s;
-    }
-    
-    .search-btn {
-      position: absolute;
-      right: 0;
-      top: 0;
-      height: 100%;
-      background: #ee4d2d;
-      border: none;
-      color: white;
-      padding: 0 16px;
-      border-top-right-radius: 4px;
-      border-bottom-right-radius: 4px;
-      cursor: pointer;
-    }
-    
-    .nav-links {
-      display: flex;
-      gap: 16px;
-      align-items: center;
-    }
-    
-    .nav-link {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      color: #555;
-      text-decoration: none;
-      font-size: 12px;
-      transition: all 0.2s;
-    }
-    
-    .nav-link:hover {
-      color: #ee4d2d;
-    }
-    
-    .nav-link i {
-      font-size: 18px;
-      margin-bottom: 4px;
-    }
-    
-    .container {
-      max-width: 1200px;
-      margin: 24px auto;
-      padding: 0 16px;
-    }
-
-    .breadcrumb {
-      display: flex;
-      align-items: center;
-      font-size: 14px;
-      margin-bottom: 16px;
-      color: #666;
-    }
-
-    .breadcrumb a {
-      color: #666;
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-
-    .breadcrumb a:hover {
-      color: #ee4d2d;
-    }
-
-    .breadcrumb .separator {
-      margin: 0 8px;
-      color: #999;
-    }
-    
-    .product-detail {
-      background-color: white;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-      display: flex;
-      flex-direction: column;
-    }
-
-    @media (min-width: 768px) {
-      .product-detail {
-        flex-direction: row;
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'chopee': {
+              '50': '#fff0eb',
+              '100': '#ffdfd3',
+              '500': '#ee4d2d',
+              '600': '#d23f21',
+            }
+          }
+        }
       }
     }
-    
-    .product-image-container {
-      flex: 1;
-      min-width: 300px;
-      padding: 24px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background-color: #f9f9f9;
-    }
-    
-    .product-image {
-      max-width: 100%;
-      max-height: 400px;
-      object-fit: contain;
-    }
-    
-    .product-info {
-      flex: 1;
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
-    }
-    
-    .product-title {
-      font-size: 24px;
-      font-weight: 600;
-      margin-bottom: 8px;
-      color: #333;
-    }
-    
-    .product-category-badge {
-      display: inline-block;
-      background-color: #ee4d2d;
-      color: white;
-      padding: 4px 12px;
-      border-radius: 16px;
-      font-size: 14px;
-      margin-bottom: 16px;
-    }
-    
-    .product-price-container {
-      background-color: #fffaf7;
-      padding: 16px;
-      border-radius: 8px;
-      margin-bottom: 16px;
-    }
-    
-    .product-price {
-      font-size: 28px;
-      font-weight: 700;
-      color: #ee4d2d;
-    }
-    
-    .product-meta {
-      margin-bottom: 24px;
-    }
-    
-    .meta-item {
-      display: flex;
-      align-items: center;
-      margin-bottom: 8px;
-      color: #666;
-    }
-    
-    .meta-item i {
-      margin-right: 8px;
-      color: #999;
-      width: 20px;
-    }
-    
-    .product-description-title {
-      font-size: 18px;
-      font-weight: 600;
-      margin-bottom: 12px;
-      color: #333;
-    }
-    
-    .product-description {
-      color: #555;
-      line-height: 1.6;
-      margin-bottom: 24px;
-      white-space: pre-line; /* Preserve line breaks */
-    }
-    
-    .action-buttons {
-      display: flex;
-      gap: 16px;
-      margin-top: auto;
-    }
-    
-    .btn {
-      padding: 12px 24px;
-      border-radius: 4px;
-      font-weight: 500;
-      font-size: 16px;
-      cursor: pointer;
-      text-align: center;
-      border: none;
-      transition: all 0.3s;
-    }
-    
-    .btn-primary {
-      background-color: #ee4d2d;
-      color: white;
-      flex: 2;
-    }
-    
-    .btn-primary:hover {
-      background-color: #d23f21;
-    }
-    
-    .btn-secondary {
-      background-color: #fff0eb;
-      color: #ee4d2d;
-      border: 1px solid #ee4d2d;
-      flex: 1;
-    }
-    
-    .btn-secondary:hover {
-      background-color: #ffdfd3;
-    }
-    
-    .similar-products {
-      margin-top: 32px;
-    }
-    
-    .similar-products-title {
-      font-size: 20px;
-      font-weight: 600;
-      margin-bottom: 16px;
-      color: #333;
-    }
-    
-    .back-button {
-      display: inline-flex;
-      align-items: center;
-      color: #666;
-      text-decoration: none;
-      margin-bottom: 16px;
-      font-weight: 500;
-      transition: color 0.2s;
-    }
-    
-    .back-button:hover {
-      color: #ee4d2d;
-    }
-    
-    .back-button i {
-      margin-right: 8px;
-    }
-    
-    .products-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 16px;
-    }
-    
-    .product-card {
+  </script>
+  <style>
+    /* Cart Drawer Styles */
+    .cart-drawer {
+      position: fixed;
+      top: 0;
+      right: -400px;
+      width: 100%;
+      max-width: 400px;
+      height: 100vh;
       background-color: white;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-      transition: all 0.2s;
-      cursor: pointer;
-      text-decoration: none;
-      color: inherit;
-      display: block;
+      z-index: 1000;
+      transition: right 0.3s ease-in-out;
+      box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+      overflow-y: auto;
     }
     
-    .product-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    .cart-drawer.open {
+      right: 0;
     }
     
-    .product-img-container {
-      position: relative;
-      padding-top: 100%; /* 1:1 Aspect Ratio */
-      background-color: #f9f9f9;
-      overflow: hidden;
-    }
-    
-    .product-img {
-      position: absolute;
+    .overlay {
+      position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      object-fit: cover;
-    }
-    
-    .product-id {
-      position: absolute;
-      top: 8px;
-      left: 8px;
       background-color: rgba(0,0,0,0.5);
-      color: white;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 12px;
+      z-index: 999;
+      display: none;
     }
     
-    .product-details {
-      padding: 12px;
+    .overlay.open {
+      display: block;
     }
     
-    .product-name {
-      font-weight: 500;
-      margin-bottom: 8px;
-      color: #333;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-      height: 40px;
+    .cart-item-enter {
+      opacity: 0;
+      transform: translateX(20px);
     }
     
-    .product-price-sm {
-      font-weight: 600;
-      color: #ee4d2d;
-      font-size: 16px;
-      margin-bottom: 6px;
+    .cart-item-enter-active {
+      opacity: 1;
+      transform: translateX(0);
+      transition: opacity 300ms, transform 300ms;
     }
     
-    @media (max-width: 768px) {
-      .search-container {
-        max-width: 100%;
-        margin: 12px 0;
-      }
-      
-      .header-content {
-        flex-direction: column;
-        align-items: stretch;
-      }
-      
-      .logo-container {
-        justify-content: center;
-        margin-bottom: 12px;
-      }
-      
-      .nav-links {
-        justify-content: center;
-        margin-top: 12px;
-      }
-      
-      .action-buttons {
-        flex-direction: column;
-      }
+    .cart-item-exit {
+      opacity: 1;
+    }
+    
+    .cart-item-exit-active {
+      opacity: 0;
+      transform: translateX(20px);
+      transition: opacity 300ms, transform 300ms;
     }
   </style>
 </head>
-<body>
+<body class="bg-gray-100 text-gray-800 font-sans m-0 p-0">
   <!-- Header -->
-  <header class="header">
-    <div class="header-content">
-      <div class="logo-container">
-        <a href="index.php" style="text-decoration: none; display: flex; align-items: center;">
+  <header class="bg-white shadow-md py-3 px-6 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto flex justify-between items-center flex-col md:flex-row">
+      <div class="flex items-center justify-center mb-3 md:mb-0">
+        <a href="index.php" class="flex items-center no-underline">
           <img src="../assets/logo_no_bg.webp" alt="Chopee" class="w-10 h-10">
-          <span class="logo-text">Chopee</span>
+          <span class="text-chopee-500 font-semibold text-2xl ml-2">Chopee</span>
         </a>
       </div>
       
-      <div class="search-container">
-        <input type="text" class="search-input" placeholder="Search products...">
-        <button class="search-btn">
-          <i class="fas fa-search"></i>
-        </button>
+      <div class="flex-1 max-w-xl mx-0 md:mx-6 relative w-full">
+        <form action="index.php" method="GET" class="w-full">
+          <?php if ($selected_category != 'all'): ?>
+          <input type="hidden" name="category" value="<?php echo htmlspecialchars($selected_category); ?>">
+          <?php endif; ?>
+          <input type="text" name="search" class="w-full px-4 py-2 rounded border-2 border-chopee-500 text-sm outline-none transition-all duration-200" placeholder="Search products...">
+          <button type="submit" class="absolute right-0 top-0 h-full bg-chopee-500 border-none text-white px-4 rounded-r cursor-pointer">
+            <i class="fas fa-search"></i>
+          </button>
+        </form>
       </div>
       
-      <div class="nav-links">
-        <a href="index.php" class="nav-link">
-          <i class="fas fa-home"></i>
-          <span>Home</span>
-        </a>
-        <a href="#" class="nav-link">
-          <i class="fas fa-shopping-cart"></i>
+      <div class="flex gap-4 items-center justify-center mt-3 md:mt-0">
+        <button id="cart-button" class="flex flex-col items-center text-gray-600 no-underline text-xs hover:text-chopee-500 transition-all duration-200 border-none bg-transparent cursor-pointer relative">
+          <i class="fas fa-shopping-cart text-lg mb-1"></i>
           <span>Cart</span>
-        </a>
-        <a href="#" class="nav-link">
-          <i class="fas fa-user"></i>
-          <span>Account</span>
+          <?php if ($cart_count > 0): ?>
+          <span class="absolute -top-1 -right-1 bg-chopee-500 text-white rounded-full text-xs w-5 h-5 flex items-center justify-center">
+            <?php echo $cart_count; ?>
+          </span>
+          <?php endif; ?>
+        </button>
+        <a href="#" class="flex flex-col items-center text-gray-600 no-underline text-xs hover:text-chopee-500 transition-all duration-200">
+          <i class="fas fa-user text-lg mb-1"></i>
+          <span><?php echo htmlspecialchars($user_name); ?></span>
         </a>
       </div>
     </div>
   </header>
 
+  <!-- Cart Drawer -->
+  <div class="overlay" id="overlay"></div>
+  <div class="cart-drawer" id="cart-drawer">
+    <div class="p-4 border-b">
+      <div class="flex justify-between items-center">
+        <h2 class="text-xl font-semibold">Your Cart</h2>
+        <button id="close-cart" class="text-gray-600 hover:text-chopee-500 transition-colors duration-200">
+          <i class="fas fa-times text-xl"></i>
+        </button>
+      </div>
+    </div>
+    
+    <div class="p-4">
+      <?php if (empty($cart_items)): ?>
+        <div class="text-center py-8">
+          <i class="fas fa-shopping-cart text-gray-300 text-5xl mb-4"></i>
+          <p class="text-gray-500">Your cart is empty</p>
+          <a href="index.php" class="inline-block mt-4 bg-chopee-500 text-white py-2 px-4 rounded">Start Shopping</a>
+        </div>
+      <?php else: ?>
+        <div class="mb-4">
+          <div class="space-y-4" id="cart-items-container">
+            <?php foreach ($cart_items as $item): ?>
+              <div class="flex border-b pb-4 cart-item" data-cart-id="<?php echo $item['cart_id']; ?>">
+                <a href="product_detail.php?id=<?php echo $item['product_id']; ?>" class="w-20 h-20 bg-gray-100 rounded overflow-hidden block">
+                  <img src="../<?php echo $item['image']; ?>" alt="<?php echo $item['name']; ?>" class="w-full h-full object-cover">
+                </a>
+                <div class="ml-4 flex-1">
+                  <a href="product_detail.php?id=<?php echo $item['product_id']; ?>" class="font-medium text-sm mb-1 line-clamp-2 block hover:text-chopee-500 transition-colors duration-200"><?php echo $item['name']; ?></a>
+                  <div class="text-chopee-500 font-semibold">₱<?php echo number_format($item['price'], 2); ?></div>
+                  <div class="flex items-center justify-between mt-2">
+                    <div class="flex items-center border rounded">
+                      <button class="px-2 py-1 bg-gray-100 quantity-btn" data-action="decrease">
+                        <i class="fas fa-minus text-xs"></i>
+                      </button>
+                      <input type="number" value="<?php echo $item['quantity']; ?>" class="w-10 text-center border-none quantity-input" min="1">
+                      <button class="px-2 py-1 bg-gray-100 quantity-btn" data-action="increase">
+                        <i class="fas fa-plus text-xs"></i>
+                      </button>
+                    </div>
+                    <button class="text-gray-400 hover:text-red-500 transition-colors duration-200 remove-item">
+                      <i class="fas fa-trash-alt"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            <?php endforeach; ?>
+          </div>
+        </div>
+        
+        <div class="border-t pt-4 mt-4">
+          <div class="flex justify-between items-center mb-4">
+            <span class="text-gray-600">Subtotal</span>
+            <span class="font-semibold" id="cart-subtotal">₱<?php echo number_format($cart_total, 2); ?></span>
+          </div>
+          <div class="flex justify-between items-center mb-4">
+            <span class="text-gray-600">Shipping</span>
+            <span class="font-semibold" id="shipping-cost">₱50.00</span>
+          </div>
+          <div class="flex justify-between items-center mb-4 text-lg">
+            <span class="font-semibold">Total</span>
+            <span class="font-semibold text-chopee-500" id="cart-total">₱<?php echo number_format($cart_total + 50, 2); ?></span>
+          </div>
+          <button id="checkout" class="w-full bg-chopee-500 text-white py-3 px-6 rounded font-medium text-base cursor-pointer transition-all duration-300 hover:bg-chopee-600">
+            Checkout
+          </button>
+        </div>
+      <?php endif; ?>
+    </div>
+  </div>
+
   <!-- Main Content -->
-  <div class="container">
+  <div class="max-w-7xl mx-auto my-6 px-4">
     <!-- Breadcrumb -->
-    <div class="breadcrumb">
-      <a href="index.php">Home</a>
-      <span class="separator">/</span>
-      <a href="index.php?category=<?php echo urlencode($selected_category); ?>">
+    <div class="flex items-center text-sm mb-4 text-gray-600">
+      <a href="index.php" class="text-gray-600 no-underline hover:text-chopee-500 transition-colors duration-200">Home</a>
+      <span class="mx-2 text-gray-400">/</span>
+      <a href="index.php?category=<?php echo urlencode($selected_category); ?>" class="text-gray-600 no-underline hover:text-chopee-500 transition-colors duration-200">
         <?php echo isset($categories[$selected_category]) ? $categories[$selected_category] : 'Products'; ?>
       </a>
-      <span class="separator">/</span>
+      <span class="mx-2 text-gray-400">/</span>
       <span><?php echo $product['name']; ?></span>
     </div>
 
     <!-- Back button -->
-    <a href="index.php?category=<?php echo urlencode($selected_category); ?>" class="back-button">
-      <i class="fas fa-arrow-left"></i> Back to products
+    <a href="index.php?category=<?php echo urlencode($selected_category); ?>" class="inline-flex items-center text-gray-600 no-underline mb-4 font-medium hover:text-chopee-500 transition-colors duration-200">
+      <i class="fas fa-arrow-left mr-2"></i> Back to products
     </a>
 
     <!-- Product Detail -->
-    <div class="product-detail">
-      <div class="product-image-container">
-        <img src="../<?php echo $product['image']; ?>" alt="<?php echo $product['name']; ?>" class="product-image">
+    <div class="bg-white rounded-lg overflow-hidden shadow flex flex-col md:flex-row">
+      <div class="flex-1 min-w-[300px] p-6 flex items-center justify-center bg-gray-50">
+        <img src="../<?php echo $product['image']; ?>" alt="<?php echo $product['name']; ?>" class="max-w-full max-h-[400px] object-contain">
       </div>
       
-      <div class="product-info">
-        <h1 class="product-title"><?php echo $product['name']; ?></h1>
+      <div class="flex-1 p-6 flex flex-col">
+        <h1 class="text-2xl font-semibold mb-2 text-gray-800"><?php echo $product['name']; ?></h1>
         
-        <span class="product-category-badge">
+        <span class="inline-block bg-chopee-500 text-white py-1 px-3 rounded-full text-sm mb-4">
           <?php echo isset($categories[$product['category']]) ? $categories[$product['category']] : $product['category']; ?>
         </span>
         
-        <div class="product-price-container">
-          <div class="product-price">₱<?php echo number_format($product['price'], 2); ?></div>
+        <div class="bg-chopee-50 p-4 rounded-lg mb-4">
+          <div class="text-chopee-500 text-3xl font-bold">₱<?php echo number_format($product['price'], 2); ?></div>
         </div>
         
-        <div class="product-meta">
-          <div class="meta-item">
-            <i class="fas fa-box"></i>
+        <div class="mb-6">
+          <div class="flex items-center mb-2 text-gray-600">
+            <i class="fas fa-box mr-2 text-gray-400 w-5"></i>
             <span><?php echo $product['quantity']; ?> items in stock</span>
           </div>
-          <div class="meta-item">
-            <i class="fas fa-id-card"></i>
+          <div class="flex items-center mb-2 text-gray-600">
+            <i class="fas fa-id-card mr-2 text-gray-400 w-5"></i>
             <span>Product ID: <?php echo $product['id']; ?></span>
           </div>
         </div>
         
-        <h2 class="product-description-title">Product Description</h2>
-        <div class="product-description">
+        <div class="flex items-center mb-6">
+          <div class="mr-4">
+            <label for="product-quantity" class="block text-sm text-gray-600 mb-1">Quantity:</label>
+            <div class="flex items-center border rounded">
+              <button class="px-2 py-1 bg-gray-100" id="decrease-quantity">
+                <i class="fas fa-minus text-xs"></i>
+              </button>
+              <input type="number" id="product-quantity" value="1" class="w-16 text-center border-none" min="1">
+              <button class="px-2 py-1 bg-gray-100" id="increase-quantity">
+                <i class="fas fa-plus text-xs"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <h2 class="text-lg font-semibold mb-1 text-gray-800">Product Description</h2>
+        <div class="text-gray-600 leading-relaxed mb-3 whitespace-pre-line">
           <?php echo nl2br(htmlspecialchars($product['description'])); ?>
         </div>
         
-        <div class="action-buttons">
-          <button class="btn btn-secondary">
-            <i class="fas fa-heart"></i> Add to Wishlist
-          </button>
-          <button class="btn btn-primary">
+        <div class="flex gap-4 mt-auto flex-col md:flex-row">
+          <button id="add-to-cart" class="w-full bg-chopee-500 text-white py-3 px-6 rounded font-medium text-base cursor-pointer transition-all duration-300 hover:bg-chopee-600 flex-2">
             <i class="fas fa-shopping-cart"></i> Add to Cart
           </button>
         </div>
@@ -545,21 +509,21 @@ $product = $product_result->fetch_assoc();
     
     if ($similar_result->num_rows > 0) {
     ?>
-    <div class="similar-products">
-      <h2 class="similar-products-title">Similar Products</h2>
-      <div class="products-grid">
+    <div class="mt-8">
+      <h2 class="text-xl font-semibold mb-4 text-gray-800">Similar Products</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         <?php
         while ($similar_product = $similar_result->fetch_assoc()) {
         ?>
-        <a href="product_detail.php?id=<?php echo $similar_product['id']; ?>&category=<?php echo urlencode($selected_category); ?>" class="product-card">
-          <div class="product-img-container">
-            <span class="product-id">#<?php echo $similar_product['id']; ?></span>
-            <img src="../<?php echo $similar_product['image']; ?>" alt="<?php echo $similar_product['name']; ?>" class="product-img">
+        <a href="product_detail.php?id=<?php echo $similar_product['id']; ?>&category=<?php echo urlencode($selected_category); ?>" class="bg-white rounded-lg overflow-hidden shadow transition-all duration-200 hover:translate-y-[-4px] hover:shadow-lg cursor-pointer no-underline text-inherit block">
+          <div class="relative pt-[100%] bg-gray-50 overflow-hidden">
+            <span class="absolute top-2 left-2 bg-black/50 text-white py-0.5 px-2 rounded text-xs">#<?php echo $similar_product['id']; ?></span>
+            <img src="../<?php echo $similar_product['image']; ?>" alt="<?php echo $similar_product['name']; ?>" class="absolute top-0 left-0 w-full h-full object-cover">
           </div>
-          <div class="product-details">
-            <h3 class="product-name"><?php echo $similar_product['name']; ?></h3>
-            <div class="product-price-sm">₱<?php echo number_format($similar_product['price'], 2); ?></div>
-            <div class="product-meta">
+          <div class="p-3">
+            <h3 class="font-medium mb-2 text-gray-800 line-clamp-2 h-10 overflow-hidden"><?php echo $similar_product['name']; ?></h3>
+            <div class="font-semibold text-chopee-500 text-base mb-1.5">₱<?php echo number_format($similar_product['price'], 2); ?></div>
+            <div class="text-gray-600 text-sm">
               <span><i class="fas fa-box"></i> <?php echo $similar_product['quantity']; ?> in stock</span>
             </div>
           </div>
@@ -569,7 +533,234 @@ $product = $product_result->fetch_assoc();
     </div>
     <?php } ?>
   </div>
+  
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-4 right-4 bg-gray-800 text-white px-4 py-2 rounded shadow-lg transition-opacity duration-300 opacity-0 pointer-events-none z-50">
+    <span id="toast-message"></span>
+  </div>
 
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- JavaScript -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+
+      // Add checkout button functionality
+    const checkoutButton = document.querySelector('#checkout');
+    
+    if (checkoutButton) {
+        checkoutButton.addEventListener('click', function() {
+            // Send AJAX request to process checkout
+            fetch(window.location.href, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'action=checkout'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(data.message);
+
+                } else {
+                    showToast(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Failed to process checkout');
+            });
+        });
+    }
+
+      // Cart drawer functionality
+      const cartButton = document.getElementById('cart-button');
+      const cartDrawer = document.getElementById('cart-drawer');
+      const closeCart = document.getElementById('close-cart');
+      const overlay = document.getElementById('overlay');
+      
+      cartButton.addEventListener('click', function() {
+        cartDrawer.classList.add('open');
+        overlay.classList.add('open');
+        document.body.style.overflow = 'hidden';
+      });
+      
+      closeCart.addEventListener('click', function() {
+        cartDrawer.classList.remove('open');
+        overlay.classList.remove('open');
+        document.body.style.overflow = 'auto';
+      });
+      
+      overlay.addEventListener('click', function() {
+        cartDrawer.classList.remove('open');
+        overlay.classList.remove('open');
+        document.body.style.overflow = 'auto';
+      });
+      
+      // Product quantity functionality
+      const decreaseBtn = document.getElementById('decrease-quantity');
+      const increaseBtn = document.getElementById('increase-quantity');
+      const quantityInput = document.getElementById('product-quantity');
+      
+      decreaseBtn.addEventListener('click', function() {
+        let value = parseInt(quantityInput.value);
+        if (value > 1) {
+          quantityInput.value = value - 1;
+        }
+      });
+      
+      increaseBtn.addEventListener('click', function() {
+        let value = parseInt(quantityInput.value);
+        quantityInput.value = value + 1;
+      });
+      
+      quantityInput.addEventListener('change', function() {
+        if (parseInt(this.value) < 1) {
+          this.value = 1;
+        }
+      });
+      
+      // Add to cart functionality
+      const addToCartBtn = document.getElementById('add-to-cart');
+      
+      addToCartBtn.addEventListener('click', function() {
+        const quantity = parseInt(quantityInput.value);
+        const productId = <?php echo $product_id; ?>;
+        
+        <?php if ($user_id === null): ?>
+          showToast('Please login to add items to cart');
+        <?php else: ?>
+          // Send AJAX request to add item to cart
+          fetch(window.location.href, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `action=add_to_cart&product_id=${productId}&quantity=${quantity}`
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              showToast('Item added to cart');
+              
+              // If the cart drawer is currently open, update it
+              if (cartDrawer.classList.contains('open')) {
+                // Reload the page to update cart contents
+                location.reload();
+              } else {
+                // Just reload the page to update cart count
+                location.reload();
+              }
+            } else {
+              showToast(data.message);
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            showToast('Failed to add item to cart');
+          });
+        <?php endif; ?>
+      });
+      
+      // Cart item quantity update
+      document.querySelectorAll('.cart-item').forEach(item => {
+        const cartId = item.dataset.cartId;
+        const quantityBtns = item.querySelectorAll('.quantity-btn');
+        const quantityInput = item.querySelector('.quantity-input');
+        const removeBtn = item.querySelector('.remove-item');
+        
+        quantityBtns.forEach(btn => {
+          btn.addEventListener('click', function() {
+            let value = parseInt(quantityInput.value);
+            if (this.dataset.action === 'decrease') {
+              value = Math.max(1, value - 1);
+            } else {
+              value += 1;
+            }
+            quantityInput.value = value;
+            
+            // Update cart item quantity
+            updateCartItemQuantity(cartId, value);
+          });
+        });
+        
+        quantityInput.addEventListener('change', function() {
+          let value = parseInt(this.value);
+          if (value < 1) {
+            value = 1;
+            this.value = value;
+          }
+          
+          // Update cart item quantity
+          updateCartItemQuantity(cartId, value);
+        });
+        
+        removeBtn.addEventListener('click', function() {
+          // Remove item from cart
+          removeCartItem(cartId, item);
+        });
+      });
+      
+      // Function to update cart item quantity
+      function updateCartItemQuantity(cartId, quantity) {
+        fetch(window.location.href, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: `action=update_quantity&cart_id=${cartId}&quantity=${quantity}`
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            // Reload the page to update cart contents
+            location.reload();
+          } else {
+            showToast(data.message);
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          showToast('Failed to update cart');
+        });
+      }
+      
+      // Function to remove cart item
+      function removeCartItem(cartId, itemElement) {
+        fetch(window.location.href, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: `action=remove_item&cart_id=${cartId}`
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            // Reload the page to update cart contents
+            location.reload();
+          } else {
+            showToast(data.message);
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          showToast('Failed to remove item');
+        });
+      }
+      
+      // Toast notification function
+      function showToast(message) {
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toast-message');
+        
+        toastMessage.textContent = message;
+        toast.classList.add('opacity-100');
+        
+        setTimeout(() => {
+          toast.classList.remove('opacity-100');
+        }, 3000);
+      }
+    });
+  </script>
 </body>
 </html>
