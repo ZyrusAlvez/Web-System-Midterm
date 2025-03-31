@@ -42,8 +42,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'checkout') {
   
   try {
       // Create orders for each cart item
-      $order_query = "INSERT INTO orders (user_id, product_id, status) VALUES (?, ?, 'pending')";
-      $stmt = $connections->prepare($order_query);
+      $order_query = "INSERT INTO orders (user_id, product_id, quantity, status) VALUES (?, ?, ?, 'pending')";      $stmt = $connections->prepare($order_query);
       
       while ($cart_item = $cart_result->fetch_assoc()) {
           $product_id = $cart_item['product_id'];
@@ -68,12 +67,9 @@ if (isset($_POST['action']) && $_POST['action'] === 'checkout') {
           $update_stmt->bind_param("ii", $new_quantity, $product_id);
           $update_stmt->execute();
           
-          // Insert order entry (one per product)
-          // Insert multiple entries based on quantity
-          for ($i = 0; $i < $quantity; $i++) {
-              $stmt->bind_param("ii", $user_id, $product_id);
-              $stmt->execute();
-          }
+          // Insert order entry with quantity
+          $stmt->bind_param("iii", $user_id, $product_id, $quantity);
+          $stmt->execute();
       }
       
       // Clear the cart
@@ -345,7 +341,7 @@ if ($user_id !== null) {
           </span>
           <?php endif; ?>
         </button>
-        <a href="#" class="flex flex-col items-center text-gray-600 no-underline text-xs hover:text-chopee-500 transition-all duration-200">
+        <a href="account.php" class="flex flex-col items-center text-gray-600 no-underline text-xs hover:text-chopee-500 transition-all duration-200">
           <i class="fas fa-user text-lg mb-1"></i>
           <span><?php echo htmlspecialchars($user_name); ?></span>
         </a>
@@ -558,13 +554,29 @@ if ($user_id !== null) {
             })
             .then(response => response.json())
             .then(data => {
-                if (data.success) {
-                    showToast(data.message);
-
-                } else {
-                    showToast(data.message);
-                }
-            })
+    if (data.success) {
+        showToast(data.message);
+        
+        // Get the parent element that contains the cart items and checkout section
+        const cartContentArea = document.getElementById('cart-items-container').parentElement.parentElement;
+        
+        // Replace the entire content with the empty cart message
+        cartContentArea.innerHTML = `
+            <div class="text-center py-8">
+                <i class="fas fa-shopping-cart text-gray-300 text-5xl mb-4"></i>
+                <p class="text-gray-500">Your cart is empty</p>
+                <a href="index.php" class="inline-block mt-4 bg-chopee-500 text-white py-2 px-4 rounded">Start Shopping</a>
+            </div>
+        `;
+        
+        // Reset cart count badge
+        const cartButton = document.getElementById('cart-button');
+        const countBadge = cartButton.querySelector('span.bg-chopee-500');
+        if (countBadge) countBadge.remove();
+    } else {
+        showToast(data.message);
+    }
+          })
             .catch(error => {
                 console.error('Error:', error);
                 showToast('Failed to process checkout');
