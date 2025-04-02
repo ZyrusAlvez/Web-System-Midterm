@@ -16,20 +16,6 @@
       mysqli_begin_transaction($connections);
 
       try {
-          // Validate product quantity BEFORE updating
-          if ($new_status == 'completed' && $old_status != 'completed') {
-              $check_query = "SELECT quantity FROM products WHERE id = ?";
-              $stmt_check = mysqli_prepare($connections, $check_query);
-              mysqli_stmt_bind_param($stmt_check, "i", $product_id);
-              mysqli_stmt_execute($stmt_check);
-              $check_result = mysqli_stmt_get_result($stmt_check);
-              $product = mysqli_fetch_assoc($check_result);
-
-              if ($product['quantity'] < $quantity) {
-                  throw new Exception("Not enough product quantity available!");
-              }
-          }
-
           // Update order status
           $update_query = "UPDATE orders SET status = ? WHERE order_id = ?";
           $stmt_update = mysqli_prepare($connections, $update_query);
@@ -40,25 +26,14 @@
               throw new Exception("Failed to update order status: " . mysqli_stmt_error($stmt_update));
           }
 
-          // If status is being changed to completed, reduce product quantity
-          if ($new_status == 'completed' && $old_status != 'completed') {
-              $update_product_query = "UPDATE products SET quantity = quantity - ? WHERE id = ?";
+          // If status is being changed to cancelled, add back product quantity
+          if ($new_status == 'cancelled' && $old_status != 'cancelled') {
+              $update_product_query = "UPDATE products SET quantity = quantity + ? WHERE id = ?";
               $stmt_update_product = mysqli_prepare($connections, $update_product_query);
               mysqli_stmt_bind_param($stmt_update_product, "ii", $quantity, $product_id);
               
               if (!mysqli_stmt_execute($stmt_update_product)) {
                   throw new Exception("Failed to update product quantity: " . mysqli_stmt_error($stmt_update_product));
-              }
-          }
-
-          // If status is changed from completed to something else, add back quantity
-          if ($old_status == 'completed' && $new_status != 'completed') {
-              $restore_product_query = "UPDATE products SET quantity = quantity + ? WHERE id = ?";
-              $stmt_restore_product = mysqli_prepare($connections, $restore_product_query);
-              mysqli_stmt_bind_param($stmt_restore_product, "ii", $quantity, $product_id);
-              
-              if (!mysqli_stmt_execute($stmt_restore_product)) {
-                  throw new Exception("Failed to restore product quantity: " . mysqli_stmt_error($stmt_restore_product));
               }
           }
 
