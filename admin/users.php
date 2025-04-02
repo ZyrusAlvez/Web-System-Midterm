@@ -65,113 +65,301 @@
 
   <!-- Toastr.js -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
-</head>
-<body class="w-full h-screen flex">
-  
-  <aside class="flex flex-col gap-8 items-center justify-between w-[300px] h-full bg-[#ee4d2d]">
-
-    <div class="flex items-center justify-center gap-2 mt-8">
-      <img src="../assets/logo.jpg" class="w-[70px] h-[70px]">
-      <h1 class="text-white text-3xl mt-[10px]">Chopee</h1>
-    </div>
-
-    <div class="flex flex-col gap-4 text-start w-[80%] items-start ml-12">
-      <div class="flex gap-4 items-center text-start hover:cursor-pointer">
-        <i class="fa-solid fa-list-check text-white"></i>
-        <a href="index.php" class="text-white text-xl">Products</a>
-      </div>
-      <div class="flex gap-4 items-center text-start hover:cursor-pointer">
-        <i class="fa-solid fa-cart-shopping text-white"></i>
-        <a href="orders.php" class="text-white text-xl">Orders</a>
-      </div>
-      <div class="flex gap-4 items-center text-start hover:cursor-pointer font-bold text-2xl">
-        <i class="fa-solid fa-users text-white"></i>
-        <a href="users.php" class="text-white">Users</a>
-      </div>
-    </div>
-
-    <div class="flex items-center justify-center gap-2 mb-8">
-      <i class="fa-solid fa-right-from-bracket text-white font-xl"></i>
-      <a href="../index.php" class="text-white text-xl">Logout</a>
-    </div>
-
-  </aside>
-
-  <div class="bg-[#faf9f6] w-full h-full p-8 overflow-auto">
-    <h2 class="text-3xl font-bold mb-6">User Management</h2>
+  <style>
+    /* Reset and base styles */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
     
-    <div class="bg-white rounded-lg shadow-md p-6 overflow-x-auto">
-      <table class="min-w-full bg-white">
-        <thead>
-          <tr class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
-            <th class="py-3 px-6 text-left">ID</th>
-            <th class="py-3 px-6 text-left">Name</th>
-            <th class="py-3 px-6 text-left">Email</th>
-            <th class="py-3 px-6 text-left">Password</th>
-            <th class="py-3 px-6 text-left">Account Type</th>
-            <th class="py-3 px-6 text-center">Actions</th>
-          </tr>
-        </thead>
-        <tbody class="text-gray-600 text-sm">
-          <?php while($row = mysqli_fetch_assoc($result)): ?>
-            <tr class="border-b border-gray-200 hover:bg-gray-100">
-              <td class="py-3 px-6 text-left"><?php echo $row['id']; ?></td>
-              <td class="py-3 px-6 text-left user-data" data-field="name" data-id="<?php echo $row['id']; ?>">
-                <span class="display-value"><?php echo $row['name']; ?></span>
-                <input type="text" class="edit-input hidden w-full border rounded px-2 py-1" value="<?php echo $row['name']; ?>">
-              </td>
-              <td class="py-3 px-6 text-left user-data" data-field="email" data-id="<?php echo $row['id']; ?>">
-                <span class="display-value"><?php echo $row['email']; ?></span>
-                <input type="email" class="edit-input hidden w-full border rounded px-2 py-1" value="<?php echo $row['email']; ?>">
-              </td>
-              <td class="py-3 px-6 text-left user-data" data-field="password" data-id="<?php echo $row['id']; ?>">
-                <span class="display-value">••••••••</span>
-                <input type="text" class="edit-input hidden w-full border rounded px-2 py-1" value="<?php echo $row['password']; ?>">
-              </td>
-              <td class="py-3 px-6 text-left user-data" data-field="account_type" data-id="<?php echo $row['id']; ?>">
-                <span class="display-value">
-                  <?php if($row['account_type'] == 1): ?>
-                    <span class="bg-[#ee4d2d] text-white py-1 px-3 rounded-full text-xs">Admin</span>
-                  <?php else: ?>
-                    <span class="bg-green-200 text-green-800 py-1 px-3 rounded-full text-xs">User</span>
-                  <?php endif; ?>
-                </span>
-                <select class="edit-input hidden w-full border rounded px-2 py-1">
-                  <option value="1" <?php echo ($row['account_type'] == 1) ? 'selected' : ''; ?>>Admin</option>
-                  <option value="2" <?php echo ($row['account_type'] == 2) ? 'selected' : ''; ?>>User</option>
-                </select>
-              </td>
-              <td class="py-3 px-6 text-center">
-                <div class="flex item-center justify-center gap-2">
-                  <div class="edit-actions">
-                    <button class="edit-btn transform hover:text-[#ee4d2d] hover:scale-110">
-                      <i class="fa-solid fa-pen-to-square"></i>
-                    </button>
-                    <button class="delete-btn transform hover:text-red-500 hover:scale-110 ml-2" 
-                            onclick="confirmDelete(<?php echo $row['id']; ?>, '<?php echo $row['name']; ?>')">
-                      <i class="fa-solid fa-trash"></i>
-                    </button>
-                  </div>
-                  <div class="save-actions hidden">
-                    <button class="save-btn transform hover:text-green-500 hover:scale-110">
-                      <i class="fa-solid fa-check"></i>
-                    </button>
-                    <button class="cancel-btn transform hover:text-red-500 hover:scale-110 ml-2">
-                      <i class="fa-solid fa-times"></i>
-                    </button>
-                  </div>
-                </div>
-              </td>
-            </tr>
-          <?php endwhile; ?>
-        </tbody>
-      </table>
+    body {
+      width: 100%;
+      overflow-x: hidden;
+    }
+    
+    /* Form styles */
+    .edit-form, .add-form-container {
+      display: none;
+    }
+    
+    /* Custom modal styles */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .modal-container {
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      width: 90%;
+      max-width: 400px;
+      animation: fadeIn 0.3s;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .category-filters {
+      display: flex;
+      overflow-x: auto;
+      gap: 8px;
+      padding-bottom: 8px;
+      margin-bottom: 16px;
+    }
+    
+    .category-filter {
+      white-space: nowrap;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .category-filter.active {
+      background-color: #ee4d2d;
+      color: white;
+    }
+    
+    .category-filter:not(.active) {
+      background-color: #f5f5f5;
+      color: #333;
+    }
+    
+    .category-filter:hover:not(.active) {
+      background-color: #e0e0e0;
+    }
+    
+    .category-header {
+      font-size: 18px;
+      font-weight: bold;
+      padding: 12px;
+      background-color: #f9f9f9;
+      border-top: 1px solid #eee;
+      border-bottom: 1px solid #eee;
+      margin-top: 20px;
+      color: #333;
+    }
+    
+    .category-header:first-of-type {
+      margin-top: 0;
+    }
+
+    /* Mobile navigation styles */
+    .mobile-nav-transition {
+      transition: transform 0.3s ease-in-out;
+    }
+    
+    /* Table responsive fixes */
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+    }
+    
+    .table-container::-webkit-scrollbar {
+      height: 6px;
+    }
+    
+    .table-container::-webkit-scrollbar-thumb {
+      background-color: #ee4d2d;
+      border-radius: 3px;
+    }
+    
+    .table-container::-webkit-scrollbar-track {
+      background-color: #f1f1f1;
+    }
+    
+    /* Main content container fixes */
+    .main-content {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+    
+    /* Responsive layout improvements */
+    @media (max-width: 768px) {
+      .px-6 {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+      }
+    }
+  </style>
+</head>
+<body class="w-full min-h-screen bg-gray-50 flex flex-col">
+  <!-- Mobile Navigation Bar -->
+  <header class="bg-[#ee4d2d] text-white p-4 sticky top-0 z-30 md:hidden flex justify-between items-center shadow-md">
+    <div class="flex items-center gap-2">
+      <img src="../assets/logo.jpg" class="w-10 h-10 rounded-full object-cover">
+      <h1 class="text-xl font-bold">Chopee</h1>
+    </div>
+    <button id="mobileMenuBtn" class="text-2xl focus:outline-none">
+      <i class="fa-solid fa-bars"></i>
+    </button>
+  </header>
+
+  <!-- Mobile Side Navigation (Hidden by default) -->
+  <div id="mobileSidebar" class="fixed inset-y-0 left-0 transform -translate-x-full mobile-nav-transition w-64 bg-[#ee4d2d] z-40 md:hidden">
+    <div class="flex flex-col h-full">
+      <div class="flex items-center justify-between p-4 border-b border-[#ff6347]">
+        <div class="flex items-center gap-2">
+          <img src="../assets/logo.jpg" class="w-12 h-12 rounded-full object-cover">
+          <h1 class="text-white text-xl font-bold">Chopee Admin</h1>
+        </div>
+        <button id="closeMenuBtn" class="text-white text-xl">
+          <i class="fa-solid fa-times"></i>
+        </button>
+      </div>
+      
+      <nav class="flex flex-col gap-1 mt-6 p-2">
+        <a href="index.php" class="flex items-center gap-3 p-3 rounded-lg text-white hover:bg-[#ff6347] transition-colors">
+          <i class="fa-solid fa-list-check w-6 text-center"></i>
+          <span>Products</span>
+        </a>
+        <a href="orders.php" class="flex items-center gap-3 p-3 rounded-lg text-white hover:bg-[#ff6347] transition-colors">
+          <i class="fa-solid fa-cart-shopping w-6 text-center"></i>
+          <span>Orders</span>
+        </a>
+        <a href="users.php" class="flex items-center gap-3 p-3 rounded-lg text-white font-medium bg-[#ff6347] hover:bg-[#ff7e6b] transition-colors">
+          <i class="fa-solid fa-users w-6 text-center"></i>
+          <span>Users</span>
+        </a>
+      </nav>
+      
+      <div class="mt-auto border-t border-[#ff6347] p-4">
+        <a href="../index.php" class="flex items-center gap-3 p-3 rounded-lg text-white hover:bg-[#ff6347] transition-colors">
+          <i class="fa-solid fa-right-from-bracket w-6 text-center"></i>
+          <span>Logout</span>
+        </a>
+      </div>
     </div>
   </div>
+  
+  <!-- Backdrop when mobile menu is open -->
+  <div id="mobileBackdrop" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden md:hidden"></div>
+
+  
+  <!-- Desktop Sidebar Navigation -->
+  <aside class="hidden md:flex flex-col w-64 bg-gradient-to-b from-[#ee4d2d] to-[#d03a1b] min-h-screen fixed left-0 top-0 shadow-lg">
+    <div class="flex items-center justify-center p-4 border-b border-[#ff6347]">
+      <img src="../assets/logo.jpg" class="w-12 h-12 rounded-full object-cover">
+      <h1 class="text-white text-xl font-bold ml-3">Chopee Admin</h1>
+    </div>
+    
+    <nav class="flex flex-col gap-1 mt-6 p-2">
+      <a href="index.php" class="flex items-center gap-3 p-3 rounded-lg text-white hover:bg-[#ff6347] transition-colors">
+        <i class="fa-solid fa-list-check w-6 text-center"></i>
+        <span>Products</span>
+      </a>
+      <a href="orders.php" class="flex items-center gap-3 p-3 rounded-lg text-white hover:bg-[#ff6347] transition-colors">
+        <i class="fa-solid fa-cart-shopping w-6 text-center"></i>
+        <span>Orders</span>
+      </a>
+      <a href="users.php" class="flex items-center gap-3 p-3 rounded-lg text-white font-medium bg-[#ff6347] hover:bg-[#ff7e6b] transition-colors">
+        <i class="fa-solid fa-users w-6 text-center"></i>
+        <span>Users</span>
+      </a>
+    </nav>
+    
+    <div class="mt-auto border-t border-[#ff6347] p-4">
+      <a href="../index.php" class="flex items-center gap-3 p-3 rounded-lg text-white hover:bg-[#ff6347] transition-colors">
+        <i class="fa-solid fa-right-from-bracket w-6 text-center"></i>
+        <span>Logout</span>
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="w-full md:ml-64 p-4 md:p-6 main-content">
+    <div class="bg-[#faf9f6] w-full p-4 md:p-6 overflow-hidden">
+      <h2 class="text-2xl md:text-3xl font-bold mb-6">User Management</h2>
+    
+      <div class="bg-white rounded-lg shadow-md p-4 md:p-6 overflow-hidden">
+        <div class="table-container">
+          <table class="w-full bg-white">
+            <thead>
+              <tr class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
+                <th class="py-3 px-4 md:px-6 text-left">ID</th>
+                <th class="py-3 px-4 md:px-6 text-left">Name</th>
+                <th class="py-3 px-4 md:px-6 text-left">Email</th>
+                <th class="py-3 px-4 md:px-6 text-left">Password</th>
+                <th class="py-3 px-4 md:px-6 text-left">Account Type</th>
+                <th class="py-3 px-4 md:px-6 text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="text-gray-600 text-sm">
+              <?php while($row = mysqli_fetch_assoc($result)): ?>
+                <tr class="border-b border-gray-200 hover:bg-gray-100">
+                  <td class="py-3 px-4 md:px-6 text-left"><?php echo $row['id']; ?></td>
+                  <td class="py-3 px-4 md:px-6 text-left user-data" data-field="name" data-id="<?php echo $row['id']; ?>">
+                    <span class="display-value"><?php echo $row['name']; ?></span>
+                    <input type="text" class="edit-input hidden w-full border rounded px-2 py-1" value="<?php echo $row['name']; ?>">
+                  </td>
+                  <td class="py-3 px-4 md:px-6 text-left user-data" data-field="email" data-id="<?php echo $row['id']; ?>">
+                    <span class="display-value"><?php echo $row['email']; ?></span>
+                    <input type="email" class="edit-input hidden w-full border rounded px-2 py-1" value="<?php echo $row['email']; ?>">
+                  </td>
+                  <td class="py-3 px-4 md:px-6 text-left user-data" data-field="password" data-id="<?php echo $row['id']; ?>">
+                    <span class="display-value">••••••••</span>
+                    <input type="text" class="edit-input hidden w-full border rounded px-2 py-1" value="<?php echo $row['password']; ?>">
+                  </td>
+                  <td class="py-3 px-4 md:px-6 text-left user-data" data-field="account_type" data-id="<?php echo $row['id']; ?>">
+                    <span class="display-value">
+                      <?php if($row['account_type'] == 1): ?>
+                        <span class="bg-[#ee4d2d] text-white py-1 px-3 rounded-full text-xs">Admin</span>
+                      <?php else: ?>
+                        <span class="bg-green-200 text-green-800 py-1 px-3 rounded-full text-xs">User</span>
+                      <?php endif; ?>
+                    </span>
+                    <select class="edit-input hidden w-full border rounded px-2 py-1">
+                      <option value="1" <?php echo ($row['account_type'] == 1) ? 'selected' : ''; ?>>Admin</option>
+                      <option value="2" <?php echo ($row['account_type'] == 2) ? 'selected' : ''; ?>>User</option>
+                    </select>
+                  </td>
+                  <td class="py-3 px-4 md:px-6 text-center">
+                    <div class="flex item-center justify-center gap-2">
+                      <div class="edit-actions">
+                        <button class="edit-btn transform hover:text-[#ee4d2d] hover:scale-110">
+                          <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                        <button class="delete-btn transform hover:text-red-500 hover:scale-110 ml-2" 
+                                onclick="confirmDelete(<?php echo $row['id']; ?>, '<?php echo $row['name']; ?>')">
+                          <i class="fa-solid fa-trash"></i>
+                        </button>
+                      </div>
+                      <div class="save-actions hidden">
+                        <button class="save-btn transform hover:text-green-500 hover:scale-110">
+                          <i class="fa-solid fa-check"></i>
+                        </button>
+                        <button class="cancel-btn transform hover:text-red-500 hover:scale-110 ml-2">
+                          <i class="fa-solid fa-times"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              <?php endwhile; ?>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
 
   <!-- Delete Confirmation Modal -->
   <div id="deleteModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center hidden z-50">
-    <div class="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+    <div class="bg-white p-6 rounded-lg shadow-xl max-w-md w-full mx-4">
       <h3 class="text-xl font-bold mb-4">Confirm Deletion</h3>
       <p class="mb-6">Are you sure you want to delete user: <span id="userName" class="font-semibold"></span>?</p>
       <div class="flex justify-end gap-4">
@@ -314,6 +502,32 @@
       });
     });
   </script>
-
+  <!-- JavaScript for mobile navigation toggle -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+      const closeMenuBtn = document.getElementById('closeMenuBtn');
+      const mobileSidebar = document.getElementById('mobileSidebar');
+      const mobileBackdrop = document.getElementById('mobileBackdrop');
+      
+      function openMobileMenu() {
+        mobileSidebar.classList.remove('-translate-x-full');
+        mobileSidebar.classList.add('translate-x-0');
+        mobileBackdrop.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+      }
+      
+      function closeMobileMenu() {
+        mobileSidebar.classList.remove('translate-x-0');
+        mobileSidebar.classList.add('-translate-x-full');
+        mobileBackdrop.classList.add('hidden');
+        document.body.style.overflow = '';
+      }
+      
+      mobileMenuBtn.addEventListener('click', openMobileMenu);
+      closeMenuBtn.addEventListener('click', closeMobileMenu);
+      mobileBackdrop.addEventListener('click', closeMobileMenu);
+    });
+  </script>
 </body>
 </html>

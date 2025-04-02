@@ -993,34 +993,6 @@ if ($user_id !== null) {
   });
 </script>
 
-<!-- ==================== SQL DATABASE TABLES NEEDED ==================== -->
-<!--
-CREATE TABLE `cart` (
-  `cart_id` int(11) NOT NULL AUTO_INCREMENT,
-  `user_id` int(11) NOT NULL,
-  `product_id` int(11) NOT NULL,
-  `quantity` int(11) NOT NULL DEFAULT 1,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`cart_id`),
-  KEY `user_id` (`user_id`),
-  KEY `product_id` (`product_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE `orders` (
-  `order_id` int(11) NOT NULL AUTO_INCREMENT,
-  `user_id` int(11) NOT NULL,
-  `product_id` int(11) NOT NULL,
-  `quantity` int(11) NOT NULL DEFAULT 1,
-  `status` enum('pending','processing','shipped','delivered','cancelled') NOT NULL DEFAULT 'pending',
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`order_id`),
-  KEY `user_id` (`user_id`),
-  KEY `product_id` (`product_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
--->
-
-<!-- ==================== ADD PRODUCT TO CART BUTTON ==================== -->
-<!-- Add this where you want to display an "Add to Cart" button for a product -->
 
 <button id="add-to-cart" class="bg-chopee-500 text-white py-3 px-6 rounded font-medium text-base cursor-pointer transition-all duration-300 hover:bg-chopee-600">
   <i class="fas fa-shopping-cart"></i> Add to Cart

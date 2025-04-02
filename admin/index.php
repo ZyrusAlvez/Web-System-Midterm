@@ -292,151 +292,292 @@ if ($selected_category == 'all') {
     .category-header:first-of-type {
       margin-top: 0;
     }
+
+    .edit-form, .add-form-container {
+      display: none;
+    }
+    
+    /* Custom modal styles */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .modal-container {
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      width: 90%;
+      max-width: 400px;
+      animation: fadeIn 0.3s;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .category-filters {
+      display: flex;
+      overflow-x: auto;
+      gap: 8px;
+      padding-bottom: 8px;
+      margin-bottom: 16px;
+    }
+    
+    .category-filter {
+      white-space: nowrap;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .category-filter.active {
+      background-color: #ee4d2d;
+      color: white;
+    }
+    
+    .category-filter:not(.active) {
+      background-color: #f5f5f5;
+      color: #333;
+    }
+    
+    .category-filter:hover:not(.active) {
+      background-color: #e0e0e0;
+    }
+    
+    .category-header {
+      font-size: 18px;
+      font-weight: bold;
+      padding: 12px;
+      background-color: #f9f9f9;
+      border-top: 1px solid #eee;
+      border-bottom: 1px solid #eee;
+      margin-top: 20px;
+      color: #333;
+    }
+    
+    .category-header:first-of-type {
+      margin-top: 0;
+    }
+
+    /* New mobile navigation styles */
+    .mobile-nav-transition {
+      transition: transform 0.3s ease-in-out;
+    }
   </style>
 </head>
-<body class="w-full h-screen flex">
-  
-  <aside class="flex flex-col gap-8 items-center justify-between w-[300px] h-full bg-[#ee4d2d] sm:hidden md:flex">
-    <div class="flex items-center justify-center gap-2 mt-8">
-      <img src="../assets/logo.jpg" class="w-[70px] h-[70px]">
-      <h1 class="text-white text-3xl mt-[10px]">Chopee</h1>
+<body class="w-full min-h-screen bg-gray-50 flex flex-col">
+  <!-- Mobile Navigation Bar -->
+  <header class="bg-[#ee4d2d] text-white p-4 sticky top-0 z-30 md:hidden flex justify-between items-center shadow-md">
+    <div class="flex items-center gap-2">
+      <img src="../assets/logo.jpg" class="w-10 h-10 rounded-full object-cover">
+      <h1 class="text-xl font-bold">Chopee</h1>
     </div>
+    <button id="mobileMenuBtn" class="text-2xl focus:outline-none">
+      <i class="fa-solid fa-bars"></i>
+    </button>
+  </header>
 
-    <div class="flex flex-col gap-4 text-start w-[80%] items-start ml-12">
-      <div class="flex gap-4 items-center text-start hover:cursor-pointer font-bold text-2xl">
-        <i class="fa-solid fa-list-check text-white"></i>
-        <a href="index.php" class="text-white">Products</a>
-      </div>
-      <div class="flex gap-4 items-center text-start hover:cursor-pointer">
-        <i class="fa-solid fa-cart-shopping text-white"></i>
-        <a href="orders.php" class="text-white text-xl">Orders</a>
-      </div>
-      <div class="flex gap-4 items-center text-start hover:cursor-pointer">
-        <i class="fa-solid fa-users text-white"></i>
-        <a href="users.php" class="text-white text-xl">Users</a>
-      </div>
-    </div>
-
-    <div class="flex items-center justify-center gap-2 mb-8">
-      <i class="fa-solid fa-right-from-bracket text-white font-xl"></i>
-      <a href="../index.php" class="text-white text-xl">Logout</a>
-    </div>
-  </aside>
-
-  <div class="bg-[#faf9f6] w-full h-full p-8 overflow-y-auto">
-    <div class="flex justify-between items-center mb-6">
-      <h2 class="text-2xl font-bold">Products Management</h2>
-      <button id="showAddForm" class="px-4 py-2 bg-[#ee4d2d] text-white rounded flex items-center">
-        <i class="fa-solid fa-plus mr-2"></i> Add New Product
-      </button>
-    </div>
-
-    <!-- Add Product Form (initially hidden) -->
-    <div id="addFormContainer" class="add-form-container bg-white p-6 rounded shadow-md mb-8">
-      <div class="flex justify-between items-center mb-4">
-        <h3 class="text-xl font-bold">Add New Product</h3>
-        <button id="hideAddForm" class="text-gray-500 hover:text-gray-700">
+  <!-- Mobile Side Navigation (Hidden by default) -->
+  <div id="mobileSidebar" class="fixed inset-y-0 left-0 transform -translate-x-full mobile-nav-transition w-64 bg-[#ee4d2d] z-40 md:hidden">
+    <div class="flex flex-col h-full">
+      <div class="flex items-center justify-between p-4 border-b border-[#ff6347]">
+        <div class="flex items-center gap-2">
+          <img src="../assets/logo.jpg" class="w-12 h-12 rounded-full object-cover">
+          <h1 class="text-white text-xl font-bold">Chopee Admin</h1>
+        </div>
+        <button id="closeMenuBtn" class="text-white text-xl">
           <i class="fa-solid fa-times"></i>
         </button>
       </div>
       
-      <form action="" method="POST" enctype="multipart/form-data" id="addProductForm">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="mb-4">
-            <label for="name" class="block mb-2">Product Name:</label>
-            <input type="text" name="name" required class="border p-2 rounded w-full">
-          </div>
-          <div class="mb-4">
-            <label for="price" class="block mb-2">Price:</label>
-            <input type="number" step="0.01" name="price" required class="border p-2 rounded w-full">
-          </div>
-          <div class="mb-4">
-            <label for="quantity" class="block mb-2">Quantity:</label>
-            <input type="number" name="quantity" required class="border p-2 rounded w-full">
-          </div>
-          <div class="mb-4">
-            <label for="category" class="block mb-2">Category:</label>
-            <select name="category" required class="border p-2 rounded w-full">
-              <?php 
-              // Skip the "all" option when adding a product
-              foreach($categories as $key => $value) {
-                if($key != 'all') {
-                  echo "<option value=\"$key\">$value</option>";
-                }
-              }
-              ?>
-            </select>
-          </div>
-          <div class="mb-4 md:col-span-2">
-            <label for="description" class="block mb-2">Description:</label>
-            <textarea name="description" required class="border p-2 rounded w-full" rows="4"></textarea>
-          </div>
-          <div class="mb-4 md:col-span-2">
-            <label for="image" class="block mb-2">Product Image:</label>
-            <input type="file" name="image" accept="image/*" required class="border p-2 rounded w-full">
-          </div>
-        </div>
-        <div class="flex justify-end gap-2 mt-4">
-          <button type="button" id="cancelAddForm" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded">
-            Cancel
-          </button>
-          <button type="submit" name="add_product" class="px-4 py-2 bg-[#ee4d2d] text-white rounded">
-            Add Product
-          </button>
-        </div>
-      </form>
-    </div>
-
-    <!-- Category Filters - Modified to use URL encoding -->
-    <div class="category-filters mb-6">
-      <?php foreach($categories as $key => $value): ?>
-        <a href="index.php?category=<?php echo urlencode($key); ?>" 
-           class="category-filter <?php echo ($selected_category == $key) ? 'active' : ''; ?>">
-          <?php echo $value; ?>
+      <nav class="flex flex-col gap-1 mt-6 p-2">
+        <a href="index.php" class="flex items-center gap-3 p-3 rounded-lg text-white font-medium bg-[#ff6347] hover:bg-[#ff7e6b] transition-colors">
+          <i class="fa-solid fa-list-check w-6 text-center"></i>
+          <span>Products</span>
         </a>
-      <?php endforeach; ?>
+        <a href="orders.php" class="flex items-center gap-3 p-3 rounded-lg text-white hover:bg-[#ff6347] transition-colors">
+          <i class="fa-solid fa-cart-shopping w-6 text-center"></i>
+          <span>Orders</span>
+        </a>
+        <a href="users.php" class="flex items-center gap-3 p-3 rounded-lg text-white hover:bg-[#ff6347] transition-colors">
+          <i class="fa-solid fa-users w-6 text-center"></i>
+          <span>Users</span>
+        </a>
+      </nav>
+      
+      <div class="mt-auto border-t border-[#ff6347] p-4">
+        <a href="../index.php" class="flex items-center gap-3 p-3 rounded-lg text-white hover:bg-[#ff6347] transition-colors">
+          <i class="fa-solid fa-right-from-bracket w-6 text-center"></i>
+          <span>Logout</span>
+        </a>
+      </div>
     </div>
+  </div>
+  
+  <!-- Backdrop when mobile menu is open -->
+  <div id="mobileBackdrop" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden md:hidden"></div>
 
-    <!-- Products Table -->
-    <div class="bg-white rounded shadow-md overflow-hidden">
-      <div class="grid grid-cols-11 gap-2 bg-[#ee4d2d] p-4 font-semibold text-white text-sm uppercase text-center">
-        <div class="col-span-1">ID</div>
-        <div class="col-span-1">Image</div>
-        <div class="col-span-2">Name</div>
-        <div class="col-span-1">Price</div>
-        <div class="col-span-1">Qty</div>
-        <div class="col-span-3">Description</div>
-        <div class="col-span-2">Actions</div>
+  <div class="flex flex-1">
+    <!-- Desktop Sidebar Navigation -->
+    <aside class="hidden md:flex flex-col w-64 bg-gradient-to-b from-[#ee4d2d] to-[#d03a1b] min-h-screen fixed left-0 top-0 shadow-lg">
+      <div class="flex items-center justify-center p-4 border-b border-[#ff6347]">
+        <img src="../assets/logo.jpg" class="w-12 h-12 rounded-full object-cover">
+        <h1 class="text-white text-xl font-bold ml-3">Chopee Admin</h1>
       </div>
       
-      <!-- Grid Content -->
-      <?php 
-      if ($products_result && $products_result->num_rows > 0) {
-        $current_category = '';
-        
-        // For 'all' view, group by category
-        if ($selected_category == 'all') {
-          while($product = $products_result->fetch_assoc()) {
-            // Add category header if we're showing a new category
-            if ($current_category != $product['category']) {
-              $current_category = $product['category'];
-              $category_display_name = isset($categories[$current_category]) ? $categories[$current_category] : $current_category;
-              echo "<div class='category-header'>$category_display_name</div>";
-            }
+      <nav class="flex flex-col gap-1 mt-6 p-2">
+        <a href="index.php" class="flex items-center gap-3 p-3 rounded-lg text-white font-medium bg-[#ff6347] hover:bg-[#ff7e6b] transition-colors">
+          <i class="fa-solid fa-list-check w-6 text-center"></i>
+          <span>Products</span>
+        </a>
+        <a href="orders.php" class="flex items-center gap-3 p-3 rounded-lg text-white hover:bg-[#ff6347] transition-colors">
+          <i class="fa-solid fa-cart-shopping w-6 text-center"></i>
+          <span>Orders</span>
+        </a>
+        <a href="users.php" class="flex items-center gap-3 p-3 rounded-lg text-white hover:bg-[#ff6347] transition-colors">
+          <i class="fa-solid fa-users w-6 text-center"></i>
+          <span>Users</span>
+        </a>
+      </nav>
+      
+      <div class="mt-auto border-t border-[#ff6347] p-4">
+        <a href="../index.php" class="flex items-center gap-3 p-3 rounded-lg text-white hover:bg-[#ff6347] transition-colors">
+          <i class="fa-solid fa-right-from-bracket w-6 text-center"></i>
+          <span>Logout</span>
+        </a>
+      </div>
+    </aside>
+
+    <!-- Main Content Area - Added pl-64 for md screens -->
+    <div class="w-full md:pl-64">
+      <div class="bg-[#faf9f6] w-full h-full p-8 overflow-y-auto">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-bold">Products Management</h2>
+          <button id="showAddForm" class="px-4 py-2 bg-[#ee4d2d] text-white rounded flex items-center">
+            <i class="fa-solid fa-plus mr-2"></i> Add New Product
+          </button>
+        </div>
+
+        <!-- Add Product Form (initially hidden) -->
+        <div id="addFormContainer" class="add-form-container bg-white p-6 rounded shadow-md mb-8">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold">Add New Product</h3>
+            <button id="hideAddForm" class="text-gray-500 hover:text-gray-700">
+              <i class="fa-solid fa-times"></i>
+            </button>
+          </div>
+          
+          <form action="" method="POST" enctype="multipart/form-data" id="addProductForm">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="mb-4">
+                <label for="name" class="block mb-2">Product Name:</label>
+                <input type="text" name="name" required class="border p-2 rounded w-full">
+              </div>
+              <div class="mb-4">
+                <label for="price" class="block mb-2">Price:</label>
+                <input type="number" step="0.01" name="price" required class="border p-2 rounded w-full">
+              </div>
+              <div class="mb-4">
+                <label for="quantity" class="block mb-2">Quantity:</label>
+                <input type="number" name="quantity" required class="border p-2 rounded w-full">
+              </div>
+              <div class="mb-4">
+                <label for="category" class="block mb-2">Category:</label>
+                <select name="category" required class="border p-2 rounded w-full">
+                  <?php 
+                  // Skip the "all" option when adding a product
+                  foreach($categories as $key => $value) {
+                    if($key != 'all') {
+                      echo "<option value=\"$key\">$value</option>";
+                    }
+                  }
+                  ?>
+                </select>
+              </div>
+              <div class="mb-4 md:col-span-2">
+                <label for="description" class="block mb-2">Description:</label>
+                <textarea name="description" required class="border p-2 rounded w-full" rows="4"></textarea>
+              </div>
+              <div class="mb-4 md:col-span-2">
+                <label for="image" class="block mb-2">Product Image:</label>
+                <input type="file" name="image" accept="image/*" required class="border p-2 rounded w-full">
+              </div>
+            </div>
+            <div class="flex justify-end gap-2 mt-4">
+              <button type="button" id="cancelAddForm" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded">
+                Cancel
+              </button>
+              <button type="submit" name="add_product" class="px-4 py-2 bg-[#ee4d2d] text-white rounded">
+                Add Product
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Category Filters - Modified to use URL encoding -->
+        <div class="category-filters mb-6">
+          <?php foreach($categories as $key => $value): ?>
+            <a href="index.php?category=<?php echo urlencode($key); ?>" 
+               class="category-filter <?php echo ($selected_category == $key) ? 'active' : ''; ?>">
+              <?php echo $value; ?>
+            </a>
+          <?php endforeach; ?>
+        </div>
+
+        <!-- Products Table -->
+        <div class="bg-white rounded shadow-md overflow-hidden">
+          <div class="grid grid-cols-11 gap-2 bg-[#ee4d2d] p-4 font-semibold text-white text-sm uppercase text-center">
+            <div class="col-span-1">ID</div>
+            <div class="col-span-1">Image</div>
+            <div class="col-span-2">Name</div>
+            <div class="col-span-1">Price</div>
+            <div class="col-span-1">Qty</div>
+            <div class="col-span-3">Description</div>
+            <div class="col-span-2">Actions</div>
+          </div>
+          
+          <!-- Grid Content -->
+          <?php 
+          if ($products_result && $products_result->num_rows > 0) {
+            $current_category = '';
             
-            // Display product row
-            displayProductRow($product, $categories);
-          }
-        } else {
-          // Just show products for the selected category
-          while($product = $products_result->fetch_assoc()) {
-            displayProductRow($product, $categories);
-          }
-        }
-      } else {
-      ?>
-        <div class="p-8 text-center text-gray-500">No products found</div>
-      <?php } ?>
+            // For 'all' view, group by category
+            if ($selected_category == 'all') {
+              while($product = $products_result->fetch_assoc()) {
+                // Add category header if we're showing a new category
+                if ($current_category != $product['category']) {
+                  $current_category = $product['category'];
+                  $category_display_name = isset($categories[$current_category]) ? $categories[$current_category] : $current_category;
+                  echo "<div class='category-header'>$category_display_name</div>";
+                }
+                
+                // Display product row
+                displayProductRow($product, $categories);
+              }
+            } else {
+              // Just show products for the selected category
+              while($product = $products_result->fetch_assoc()) {
+                displayProductRow($product, $categories);
+              }
+            }
+          } else {
+          ?>
+            <div class="p-8 text-center text-gray-500">No products found</div>
+          <?php } ?>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -465,7 +606,33 @@ if ($selected_category == 'all') {
   <script src="https://kit.fontawesome.com/d5b7a13861.js" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-  
+    <!-- JavaScript for mobile navigation toggle -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+      const closeMenuBtn = document.getElementById('closeMenuBtn');
+      const mobileSidebar = document.getElementById('mobileSidebar');
+      const mobileBackdrop = document.getElementById('mobileBackdrop');
+      
+      function openMobileMenu() {
+        mobileSidebar.classList.remove('-translate-x-full');
+        mobileSidebar.classList.add('translate-x-0');
+        mobileBackdrop.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+      }
+      
+      function closeMobileMenu() {
+        mobileSidebar.classList.remove('translate-x-0');
+        mobileSidebar.classList.add('-translate-x-full');
+        mobileBackdrop.classList.add('hidden');
+        document.body.style.overflow = '';
+      }
+      
+      mobileMenuBtn.addEventListener('click', openMobileMenu);
+      closeMenuBtn.addEventListener('click', closeMobileMenu);
+      mobileBackdrop.addEventListener('click', closeMobileMenu);
+    });
+  </script>
   <script>
     // Configure toastr options
     toastr.options = {
