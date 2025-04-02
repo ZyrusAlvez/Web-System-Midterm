@@ -440,8 +440,8 @@ if ($user_id !== null) {
 
     <!-- Product Detail -->
     <div class="bg-white rounded-lg overflow-hidden shadow flex flex-col md:flex-row">
-      <div class="flex-1 min-w-[300px] p-6 flex items-center justify-center bg-gray-50">
-        <img src="../<?php echo $product['image']; ?>" alt="<?php echo $product['name']; ?>" class="max-w-full max-h-[400px] object-contain">
+      <div class="flex-1 min-w-[300px] max-w-[42%] p-6 flex items-center justify-center bg-gray-50">
+        <img src="../<?php echo $product['image']; ?>" alt="<?php echo $product['name']; ?>" class="max-w-full max-h-full object-cover">
       </div>
       
       <div class="flex-1 p-6 flex flex-col">
