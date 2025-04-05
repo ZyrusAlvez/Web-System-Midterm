@@ -556,12 +556,7 @@ if ($selected_category == 'all') {
             // For 'all' view, group by category
             if ($selected_category == 'all') {
               while($product = $products_result->fetch_assoc()) {
-                // Add category header if we're showing a new category
-                if ($current_category != $product['category']) {
-                  $current_category = $product['category'];
-                  $category_display_name = isset($categories[$current_category]) ? $categories[$current_category] : $current_category;
-                  echo "<div class='category-header'>$category_display_name</div>";
-                }
+
                 
                 // Display product row
                 displayProductRow($product, $categories);

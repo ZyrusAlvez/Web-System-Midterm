@@ -164,7 +164,7 @@
     
     /* Table responsive fixes */
     .table-container {
-      width: 100%;
+      width: full;
       overflow-x: auto;
     }
     
@@ -281,7 +281,7 @@
   </aside>
 
   <!-- Main Content -->
-  <main class="w-full md:ml-64 p-4 md:p-6 main-content">
+  <main class="w-full md:w-[80%] md:ml-64 p-4 md:p-6 main-content">
     <div class="bg-[#faf9f6] w-full p-4 md:p-6 overflow-hidden">
       <h2 class="text-2xl md:text-3xl font-bold mb-6">User Management</h2>
     
@@ -289,32 +289,32 @@
         <div class="table-container">
           <table class="w-full bg-white">
             <thead>
-              <tr class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
-                <th class="py-3 px-4 md:px-6 text-left">ID</th>
-                <th class="py-3 px-4 md:px-6 text-left">Name</th>
-                <th class="py-3 px-4 md:px-6 text-left">Email</th>
-                <th class="py-3 px-4 md:px-6 text-left">Password</th>
-                <th class="py-3 px-4 md:px-6 text-left">Account Type</th>
-                <th class="py-3 px-4 md:px-6 text-center">Actions</th>
+              <tr class="bg-[#ee4d2d] text-white uppercase text-sm leading-normal">
+                <th class="py-3 px-4 md:px-2 text-left">ID</th>
+                <th class="py-3 px-4 md:px-2 text-left">Name</th>
+                <th class="py-3 px-4 md:px-2 text-left">Email</th>
+                <th class="py-3 px-4 md:px-2 text-left">Password</th>
+                <th class="py-3 px-4 md:px-2 text-left">Account Type</th>
+                <th class="py-3 px-4 md:px-2 text-center">Actions</th>
               </tr>
             </thead>
             <tbody class="text-gray-600 text-sm">
               <?php while($row = mysqli_fetch_assoc($result)): ?>
                 <tr class="border-b border-gray-200 hover:bg-gray-100">
-                  <td class="py-3 px-4 md:px-6 text-left"><?php echo $row['id']; ?></td>
-                  <td class="py-3 px-4 md:px-6 text-left user-data" data-field="name" data-id="<?php echo $row['id']; ?>">
+                  <td class="py-3 px-4 md:px-2 text-left"><?php echo $row['id']; ?></td>
+                  <td class="py-3 px-4 md:px-2 text-left user-data" data-field="name" data-id="<?php echo $row['id']; ?>">
                     <span class="display-value"><?php echo $row['name']; ?></span>
                     <input type="text" class="edit-input hidden w-full border rounded px-2 py-1" value="<?php echo $row['name']; ?>">
                   </td>
-                  <td class="py-3 px-4 md:px-6 text-left user-data" data-field="email" data-id="<?php echo $row['id']; ?>">
+                  <td class="py-3 px-4 md:px-2 text-left user-data" data-field="email" data-id="<?php echo $row['id']; ?>">
                     <span class="display-value"><?php echo $row['email']; ?></span>
                     <input type="email" class="edit-input hidden w-full border rounded px-2 py-1" value="<?php echo $row['email']; ?>">
                   </td>
-                  <td class="py-3 px-4 md:px-6 text-left user-data" data-field="password" data-id="<?php echo $row['id']; ?>">
+                  <td class="py-3 px-4 md:px-2 text-left user-data" data-field="password" data-id="<?php echo $row['id']; ?>">
                     <span class="display-value">••••••••</span>
                     <input type="text" class="edit-input hidden w-full border rounded px-2 py-1" value="<?php echo $row['password']; ?>">
                   </td>
-                  <td class="py-3 px-4 md:px-6 text-left user-data" data-field="account_type" data-id="<?php echo $row['id']; ?>">
+                  <td class="py-3 px-4 md:px-2 text-left user-data" data-field="account_type" data-id="<?php echo $row['id']; ?>">
                     <span class="display-value">
                       <?php if($row['account_type'] == 1): ?>
                         <span class="bg-[#ee4d2d] text-white py-1 px-3 rounded-full text-xs">Admin</span>
@@ -327,7 +327,7 @@
                       <option value="2" <?php echo ($row['account_type'] == 2) ? 'selected' : ''; ?>>User</option>
                     </select>
                   </td>
-                  <td class="py-3 px-4 md:px-6 text-center">
+                  <td class="py-3 px-4 md:px-2 text-center">
                     <div class="flex item-center justify-center gap-2">
                       <div class="edit-actions">
                         <button class="edit-btn transform hover:text-[#ee4d2d] hover:scale-110">

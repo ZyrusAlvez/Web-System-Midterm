@@ -58,6 +58,8 @@ if (isset($_POST['action']) && $_POST['action'] === 'checkout') {
           
           if ($product['quantity'] < $quantity) {
               throw new Exception("Not enough stock for one or more products");
+
+
           }
           
           // Update product quantity
@@ -555,7 +557,7 @@ if ($user_id !== null) {
             .then(response => response.json())
             .then(data => {
     if (data.success) {
-        showToast(data.message);
+      showToast(data.message);
         
         // Get the parent element that contains the cart items and checkout section
         const cartContentArea = document.getElementById('cart-items-container').parentElement.parentElement;
@@ -574,6 +576,10 @@ if ($user_id !== null) {
         const countBadge = cartButton.querySelector('span.bg-chopee-500');
         if (countBadge) countBadge.remove();
     } else {
+        // Show an alert when there's not enough stock
+        if (data.message && data.message.includes("Not enough stock")) {
+            alert("Not enough stock for one or more products in your cart!");
+        }
         showToast(data.message);
     }
           })

@@ -1,4 +1,5 @@
 <?php
+session_start();
 include("connections.php");
 
 $name = $address = $email = $password = $cpassword = "";
@@ -27,14 +28,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if ($result->num_rows > 0) {
             $errorMessage = "Email is already registered!";
         } else {
-            // Insert user data here (commented out as it was missing in original)
-            /*
+            // Insert new user
             $stmt = $connections->prepare("INSERT INTO users (name, address, email, password, account_type) VALUES (?, ?, ?, ?, '0')");
             $stmt->bind_param("ssss", $name, $address, $email, $password);
             $stmt->execute();
-            */
             
-            // Redirect if credentials are valid
+            // Get the newly created user ID
+            $user_id = $connections->insert_id;
+            
+            // Set session variables
+            $_SESSION["user_id"] = $user_id;
+            $_SESSION["email"] = $email;
+            $_SESSION["name"] = $name;
+            $_SESSION["account_type"] = '0'; // Regular user
+            
+            // Redirect to user dashboard
             header("Location: user/index.php");
             exit();
         }

@@ -236,7 +236,6 @@
         <h1 class="text-3xl font-bold mb-6">Order Management</h1>
         
         <div class="bg-white rounded-lg shadow-md p-6">
-          <h2 class="text-xl font-semibold mb-4">Orders List</h2>
           
           <!-- Improved Status filters -->
           <div class="flex flex-wrap gap-4 mb-6">
@@ -261,13 +260,13 @@
           <div class="overflow-x-auto">
             <table class="min-w-full bg-white rounded-lg">
               <thead>
-                <tr class="bg-gray-100">
-                  <th class="px-6 py-3 text-left text-sm font-semibold text-gray-600">Order ID</th>
-                  <th class="px-6 py-3 text-left text-sm font-semibold text-gray-600">User</th>
-                  <th class="px-6 py-3 text-left text-sm font-semibold text-gray-600">Product</th>
-                  <th class="px-6 py-3 text-left text-sm font-semibold text-gray-600">Quantity</th>
-                  <th class="px-6 py-3 text-left text-sm font-semibold text-gray-600">Status</th>
-                  <th class="px-6 py-3 text-left text-sm font-semibold text-gray-600">Actions</th>
+                <tr class="bg-[#ee4d2d] text-white">
+                  <th class="px-6 py-3 text-left text-sm font-semibold">Order ID</th>
+                  <th class="px-6 py-3 text-left text-sm font-semibold">User</th>
+                  <th class="px-6 py-3 text-left text-sm font-semibold">Product</th>
+                  <th class="px-6 py-3 text-left text-sm font-semibold">Quantity</th>
+                  <th class="px-6 py-3 text-left text-sm font-semibold">Status</th>
+                  <th class="px-6 py-3 text-left text-sm font-semibold">Actions</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-200">

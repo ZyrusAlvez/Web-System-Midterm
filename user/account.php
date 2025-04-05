@@ -994,43 +994,5 @@ if ($user_id !== null) {
 </script>
 
 
-<button id="add-to-cart" class="bg-chopee-500 text-white py-3 px-6 rounded font-medium text-base cursor-pointer transition-all duration-300 hover:bg-chopee-600">
-  <i class="fas fa-shopping-cart"></i> Add to Cart
-</button>
-
-<script>
-  // Add to cart functionality
-  document.getElementById('add-to-cart').addEventListener('click', function() {
-    const productId = <?php echo $product_id; ?>; // Make sure $product_id is defined
-    const quantity = 1; // Or get from an input field
-    
-    <?php if ($user_id === null): ?>
-      showToast('Please login to add items to cart');
-    <?php else: ?>
-      // Send AJAX request to add item to cart
-      fetch(window.location.href, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: `action=add_to_cart&product_id=${productId}&quantity=${quantity}`
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          showToast('Item added to cart');
-          // Reload the page to update cart count
-          location.reload();
-        } else {
-          showToast(data.message);
-        }
-      })
-      .catch(error => {
-        console.error('Error:', error);
-        showToast('Failed to add item to cart');
-      });
-    <?php endif; ?>
-  });
-</script>
 </body>
 </html>
