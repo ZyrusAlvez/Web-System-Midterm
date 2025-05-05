@@ -223,7 +223,7 @@
       </div>
       
       <nav class="flex flex-col gap-1 mt-6 p-2">
-        <a href="index.php" class="flex items-center gap-3 p-3 rounded-lg text-white hover:bg-[#ff6347] transition-colors">
+        <a href="products.php" class="flex items-center gap-3 p-3 rounded-lg text-white hover:bg-[#ff6347] transition-colors">
           <i class="fa-solid fa-list-check w-6 text-center"></i>
           <span>Products</span>
         </a>
@@ -258,7 +258,7 @@
     </div>
     
     <nav class="flex flex-col gap-1 mt-6 p-2">
-      <a href="index.php" class="flex items-center gap-3 p-3 rounded-lg text-white hover:bg-[#ff6347] transition-colors">
+      <a href="products.php" class="flex items-center gap-3 p-3 rounded-lg text-white hover:bg-[#ff6347] transition-colors">
         <i class="fa-solid fa-list-check w-6 text-center"></i>
         <span>Products</span>
       </a>
