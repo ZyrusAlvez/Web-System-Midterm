@@ -2,9 +2,7 @@
 session_start();
 include("../connections.php");
 
-if (!isset($connections)) {
-    die("Database connection error.");
-}
+if (!isset($connections)) die("Database connection error.");
 
 // Define categories
 $categories = [
@@ -18,7 +16,7 @@ $categories = [
     "sports & travel" => "Sports & Travel"
 ];
 
-// Get selected category for filtering - add urldecode to properly handle special characters
+// Get selected category for filtering
 $selected_category = isset($_GET['category']) ? urldecode($_GET['category']) : 'all';
 
 // Process delete action
@@ -26,23 +24,18 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete' && isset($_GET['id']))
     $id = $_GET['id'];
     
     // First, get the image path to delete the file
-    $image_query = "SELECT image FROM products WHERE id = ?";
-    $stmt = $connections->prepare($image_query);
+    $stmt = $connections->prepare("SELECT image FROM products WHERE id = ?");
     $stmt->bind_param("i", $id);
     $stmt->execute();
     $result = $stmt->get_result();
     
     if ($row = $result->fetch_assoc()) {
         $image_path = "../" . $row['image'];
-        // Delete the image file if it exists
-        if (file_exists($image_path)) {
-            unlink($image_path);
-        }
+        if (file_exists($image_path)) unlink($image_path);
     }
     
     // Delete the product from database
-    $delete_query = "DELETE FROM products WHERE id = ?";
-    $stmt = $connections->prepare($delete_query);
+    $stmt = $connections->prepare("DELETE FROM products WHERE id = ?");
     $stmt->bind_param("i", $id);
     
     if ($stmt->execute()) {
@@ -52,8 +45,6 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete' && isset($_GET['id']))
     }
     
     $stmt->close();
-    
-    // Redirect to remove the action from URL and maintain category filter - use urlencode for the redirect
     header("Location: products.php?category=" . urlencode($selected_category));
     exit();
 }
@@ -69,46 +60,30 @@ if (isset($_POST['edit_product'])) {
     
     // Check if a new image was uploaded
     if (!empty($_FILES['edit_image']['name'])) {
-        // Handle file upload
         $target_dir = "../uploads/";
-        
-        // Create directory if it doesn't exist
-        if (!file_exists($target_dir)) {
-            mkdir($target_dir, 0777, true);
-        }
+        if (!file_exists($target_dir)) mkdir($target_dir, 0777, true);
         
         $file_extension = strtolower(pathinfo($_FILES["edit_image"]["name"], PATHINFO_EXTENSION));
         $new_filename = uniqid() . '.' . $file_extension;
         $target_file = $target_dir . $new_filename;
-        
-        // Check if image file is valid
-        $valid_extensions = array("jpg", "jpeg", "png", "gif");
+        $valid_extensions = ["jpg", "jpeg", "png", "gif"];
         
         if (in_array($file_extension, $valid_extensions)) {
-            // Get old image path to delete
-            $get_old_image = "SELECT image FROM products WHERE id = ?";
-            $stmt = $connections->prepare($get_old_image);
+            // Get old image to delete
+            $stmt = $connections->prepare("SELECT image FROM products WHERE id = ?");
             $stmt->bind_param("i", $id);
             $stmt->execute();
             $result = $stmt->get_result();
             
             if ($row = $result->fetch_assoc()) {
                 $old_image_path = "../" . $row['image'];
-                // Delete the old image file if it exists
-                if (file_exists($old_image_path)) {
-                    unlink($old_image_path);
-                }
+                if (file_exists($old_image_path)) unlink($old_image_path);
             }
             
             // Upload new file
             if (move_uploaded_file($_FILES["edit_image"]["tmp_name"], $target_file)) {
-                // File uploaded successfully, now update database with new image
                 $image_path = "uploads/" . $new_filename;
-                
-                // Prepare SQL statement with correct parameter order
                 $stmt = $connections->prepare("UPDATE products SET name = ?, price = ?, quantity = ?, description = ?, image = ?, category = ? WHERE id = ?");
-                
-                // Bind parameters - Fix the parameter order to match the SQL statement
                 $stmt->bind_param("sdisssi", $name, $price, $quantity, $description, $image_path, $category, $id);
             } else {
                 $error_message = "Error uploading file.";
@@ -124,14 +99,11 @@ if (isset($_POST['edit_product'])) {
     
     // Execute query
     if (!isset($error_message) && $stmt->execute()) {
-        // Success message
         $success_message = "Product updated successfully!";
     } else if (!isset($error_message)) {
-        // Error message
         $error_message = "Error updating product: " . $stmt->error;
     }
     
-    // Close statement
     $stmt->close();
 }
 
@@ -146,41 +118,25 @@ if (isset($_POST['add_product'])) {
     
     // Handle file upload
     $target_dir = "../uploads/";
-    
-    // Create directory if it doesn't exist
-    if (!file_exists($target_dir)) {
-        mkdir($target_dir, 0777, true);
-    }
+    if (!file_exists($target_dir)) mkdir($target_dir, 0777, true);
     
     $file_extension = strtolower(pathinfo($_FILES["image"]["name"], PATHINFO_EXTENSION));
     $new_filename = uniqid() . '.' . $file_extension;
     $target_file = $target_dir . $new_filename;
-    
-    // Check if image file is valid
-    $valid_extensions = array("jpg", "jpeg", "png", "gif");
+    $valid_extensions = ["jpg", "jpeg", "png", "gif"];
     
     if (in_array($file_extension, $valid_extensions)) {
-        // Upload file
         if (move_uploaded_file($_FILES["image"]["tmp_name"], $target_file)) {
-            // File uploaded successfully, now insert into database
             $image_path = "uploads/" . $new_filename;
-            
-            // Prepare SQL statement
             $stmt = $connections->prepare("INSERT INTO products (name, price, quantity, description, image, category) VALUES (?, ?, ?, ?, ?, ?)");
-            
-            // Bind parameters
             $stmt->bind_param("sdisss", $name, $price, $quantity, $description, $image_path, $category);
             
-            // Execute query
             if ($stmt->execute()) {
-                // Success message
                 $success_message = "Product added successfully!";
             } else {
-                // Error message
                 $error_message = "Error adding product: " . $stmt->error;
             }
             
-            // Close statement
             $stmt->close();
         } else {
             $error_message = "Error uploading file.";
@@ -190,20 +146,56 @@ if (isset($_POST['add_product'])) {
     }
 }
 
-// Fetch all products for display with category filter
+// Fetch products with category filter
 if ($selected_category == 'all') {
-    $products_query = "SELECT * FROM products ORDER BY category, id DESC";
+    $products_result = $connections->query("SELECT * FROM products ORDER BY category, id DESC");
 } else {
-    $products_query = "SELECT * FROM products WHERE category = ? ORDER BY id DESC";
-}
-
-if ($selected_category == 'all') {
-    $products_result = $connections->query($products_query);
-} else {
-    $stmt = $connections->prepare($products_query);
+    $stmt = $connections->prepare("SELECT * FROM products WHERE category = ? ORDER BY id DESC");
     $stmt->bind_param("s", $selected_category);
     $stmt->execute();
     $products_result = $stmt->get_result();
+}
+
+// Display product card function
+function displayProductCard($product, $categories) {
+    // Determine stock status for styling
+    $stockClass = $product['quantity'] <= 0 ? "text-red-500" : ($product['quantity'] <= 10 ? "text-yellow-500" : "text-green-500");
+    $stockText = $product['quantity'] <= 0 ? "Out of Stock" : ($product['quantity'] <= 10 ? "Low Stock: " . $product['quantity'] : "In Stock: " . $product['quantity']);
+    
+    // Category name and price formatting
+    $categoryName = isset($categories[$product['category']]) ? $categories[$product['category']] : $product['category'];
+    $formattedPrice = number_format($product['price'], 2);
+    ?>
+    <div class="bg-white rounded-lg overflow-hidden shadow hover:shadow-md transition-transform hover:-translate-y-1">
+        <div class="h-44 overflow-hidden relative">
+            <img src="../<?= htmlspecialchars($product['image']) ?>" alt="<?= htmlspecialchars($product['name']) ?>" class="w-full h-full object-cover transition-transform hover:scale-105">
+        </div>
+        <div class="p-4">
+            <h3 class="font-semibold text-base truncate"><?= htmlspecialchars($product['name']) ?></h3>
+            <div class="text-gray-600 text-xs mb-2"><?= htmlspecialchars($categoryName) ?></div>
+            <div class="font-bold text-[#ee4d2d] text-lg mb-1">$<?= $formattedPrice ?></div>
+            <div class="<?= $stockClass ?> text-xs mb-2"><?= $stockText ?></div>
+            <div class="text-gray-700 text-sm h-14 overflow-hidden line-clamp-3 mb-3"><?= htmlspecialchars($product['description']) ?></div>
+            <div class="flex gap-2">
+                <button class="edit-product-btn flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs flex justify-center items-center gap-1"
+                    data-id="<?= $product['id'] ?>"
+                    data-name="<?= htmlspecialchars($product['name']) ?>"
+                    data-price="<?= $product['price'] ?>"
+                    data-quantity="<?= $product['quantity'] ?>"
+                    data-description="<?= htmlspecialchars($product['description']) ?>"
+                    data-category="<?= htmlspecialchars($product['category']) ?>"
+                    data-image="<?= htmlspecialchars($product['image']) ?>">
+                    <i class="fa-solid fa-pen-to-square"></i> Edit
+                </button>
+                <button class="delete-product-btn flex-1 py-2 bg-red-500 hover:bg-red-600 text-white rounded text-xs flex justify-center items-center gap-1"
+                    data-id="<?= $product['id'] ?>"
+                    data-name="<?= htmlspecialchars($product['name']) ?>">
+                    <i class="fa-solid fa-trash"></i> Delete
+                </button>
+            </div>
+        </div>
+    </div>
+    <?php
 }
 ?>
 
@@ -214,192 +206,27 @@ if ($selected_category == 'all') {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
-  <style>
-    .edit-form, .add-form-container {
-      display: none;
-    }
-    
-    /* Custom modal styles */
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-color: rgba(0, 0, 0, 0.5);
-      z-index: 1000;
-      justify-content: center;
-      align-items: center;
-    }
-    
-    .modal-container {
-      background-color: white;
-      border-radius: 8px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-      width: 90%;
-      max-width: 400px;
-      animation: fadeIn 0.3s;
-    }
-    
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(-20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    
-    .category-filters {
-      display: flex;
-      overflow-x: auto;
-      gap: 8px;
-      padding-bottom: 8px;
-      margin-bottom: 16px;
-    }
-    
-    .category-filter {
-      white-space: nowrap;
-      padding: 8px 16px;
-      border-radius: 20px;
-      font-size: 14px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    
-    .category-filter.active {
-      background-color: #ee4d2d;
-      color: white;
-    }
-    
-    .category-filter:not(.active) {
-      background-color: #f5f5f5;
-      color: #333;
-    }
-    
-    .category-filter:hover:not(.active) {
-      background-color: #e0e0e0;
-    }
-    
-    .category-header {
-      font-size: 18px;
-      font-weight: bold;
-      padding: 12px;
-      background-color: #f9f9f9;
-      border-top: 1px solid #eee;
-      border-bottom: 1px solid #eee;
-      margin-top: 20px;
-      color: #333;
-    }
-    
-    .category-header:first-of-type {
-      margin-top: 0;
-    }
-
-    .edit-form, .add-form-container {
-      display: none;
-    }
-    
-    /* Custom modal styles */
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-color: rgba(0, 0, 0, 0.5);
-      z-index: 1000;
-      justify-content: center;
-      align-items: center;
-    }
-    
-    .modal-container {
-      background-color: white;
-      border-radius: 8px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-      width: 90%;
-      max-width: 400px;
-      animation: fadeIn 0.3s;
-    }
-    
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(-20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    
-    .category-filters {
-      display: flex;
-      overflow-x: auto;
-      gap: 8px;
-      padding-bottom: 8px;
-      margin-bottom: 16px;
-    }
-    
-    .category-filter {
-      white-space: nowrap;
-      padding: 8px 16px;
-      border-radius: 20px;
-      font-size: 14px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    
-    .category-filter.active {
-      background-color: #ee4d2d;
-      color: white;
-    }
-    
-    .category-filter:not(.active) {
-      background-color: #f5f5f5;
-      color: #333;
-    }
-    
-    .category-filter:hover:not(.active) {
-      background-color: #e0e0e0;
-    }
-    
-    .category-header {
-      font-size: 18px;
-      font-weight: bold;
-      padding: 12px;
-      background-color: #f9f9f9;
-      border-top: 1px solid #eee;
-      border-bottom: 1px solid #eee;
-      margin-top: 20px;
-      color: #333;
-    }
-    
-    .category-header:first-of-type {
-      margin-top: 0;
-    }
-
-    /* New mobile navigation styles */
-    .mobile-nav-transition {
-      transition: transform 0.3s ease-in-out;
-    }
-  </style>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="w-full min-h-screen bg-gray-50 flex flex-col">
-  <!-- Mobile Navigation Bar -->
+<body class="bg-gray-50">
+  <!-- Mobile Nav -->
   <header class="bg-[#ee4d2d] text-white p-4 sticky top-0 z-30 md:hidden flex justify-between items-center shadow-md">
     <div class="flex items-center gap-2">
       <img src="../assets/logo.jpg" class="w-10 h-10 rounded-full object-cover">
       <h1 class="text-xl font-bold">Chopee</h1>
     </div>
-    <button id="mobileMenuBtn" class="text-2xl focus:outline-none">
-      <i class="fa-solid fa-bars"></i>
-    </button>
+    <button id="mobileMenuBtn" class="text-2xl"><i class="fa-solid fa-bars"></i></button>
   </header>
 
-  <!-- Mobile Side Navigation (Hidden by default) -->
-  <div id="mobileSidebar" class="fixed inset-y-0 left-0 transform -translate-x-full mobile-nav-transition w-64 bg-[#ee4d2d] z-40 md:hidden">
+  <!-- Mobile Sidebar -->
+  <div id="mobileSidebar" class="fixed inset-y-0 left-0 -translate-x-full transition-transform w-64 bg-[#ee4d2d] z-40 md:hidden">
     <div class="flex flex-col h-full">
       <div class="flex items-center justify-between p-4 border-b border-[#ff6347]">
         <div class="flex items-center gap-2">
           <img src="../assets/logo.jpg" class="w-12 h-12 rounded-full object-cover">
           <h1 class="text-white text-xl font-bold">Chopee Admin</h1>
         </div>
-        <button id="closeMenuBtn" class="text-white text-xl">
-          <i class="fa-solid fa-times"></i>
-        </button>
+        <button id="closeMenuBtn" class="text-white text-xl"><i class="fa-solid fa-times"></i></button>
       </div>
       
       <nav class="flex flex-col gap-1 mt-6 p-2">
@@ -426,11 +253,11 @@ if ($selected_category == 'all') {
     </div>
   </div>
   
-  <!-- Backdrop when mobile menu is open -->
+  <!-- Backdrop -->
   <div id="mobileBackdrop" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden md:hidden"></div>
 
-  <div class="flex flex-1">
-    <!-- Desktop Sidebar Navigation -->
+  <div class="flex">
+    <!-- Desktop Sidebar -->
     <aside class="hidden md:flex flex-col w-64 bg-gradient-to-b from-[#ee4d2d] to-[#d03a1b] min-h-screen fixed left-0 top-0 shadow-lg">
       <div class="flex items-center justify-center p-4 border-b border-[#ff6347]">
         <img src="../assets/logo.jpg" class="w-12 h-12 rounded-full object-cover">
@@ -460,9 +287,9 @@ if ($selected_category == 'all') {
       </div>
     </aside>
 
-    <!-- Main Content Area - Added pl-64 for md screens -->
+    <!-- Main Content -->
     <div class="w-full md:pl-64">
-      <div class="bg-[#faf9f6] w-full h-full p-8 overflow-y-auto">
+      <div class="bg-[#faf9f6] p-6 min-h-screen">
         <div class="flex justify-between items-center mb-6">
           <h2 class="text-2xl font-bold">Products Management</h2>
           <button id="showAddForm" class="px-4 py-2 bg-[#ee4d2d] text-white rounded flex items-center">
@@ -470,8 +297,8 @@ if ($selected_category == 'all') {
           </button>
         </div>
 
-        <!-- Add Product Form (initially hidden) -->
-        <div id="addFormContainer" class="add-form-container bg-white p-6 rounded shadow-md mb-8">
+        <!-- Add Product Form -->
+        <div id="addFormContainer" class="hidden bg-white p-6 rounded shadow-md mb-8">
           <div class="flex justify-between items-center mb-4">
             <h3 class="text-xl font-bold">Add New Product</h3>
             <button id="hideAddForm" class="text-gray-500 hover:text-gray-700">
@@ -496,14 +323,11 @@ if ($selected_category == 'all') {
               <div class="mb-4">
                 <label for="category" class="block mb-2">Category:</label>
                 <select name="category" required class="border p-2 rounded w-full">
-                  <?php 
-                  // Skip the "all" option when adding a product
-                  foreach($categories as $key => $value) {
-                    if($key != 'all') {
-                      echo "<option value=\"$key\">$value</option>";
-                    }
-                  }
-                  ?>
+                  <?php foreach($categories as $key => $value): ?>
+                    <?php if($key != 'all'): ?>
+                      <option value="<?= $key ?>"><?= $value ?></option>
+                    <?php endif; ?>
+                  <?php endforeach; ?>
                 </select>
               </div>
               <div class="mb-4 md:col-span-2">
@@ -516,292 +340,210 @@ if ($selected_category == 'all') {
               </div>
             </div>
             <div class="flex justify-end gap-2 mt-4">
-              <button type="button" id="cancelAddForm" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded">
-                Cancel
-              </button>
-              <button type="submit" name="add_product" class="px-4 py-2 bg-[#ee4d2d] text-white rounded">
-                Add Product
-              </button>
+              <button type="button" id="cancelAddForm" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded">Cancel</button>
+              <button type="submit" name="add_product" class="px-4 py-2 bg-[#ee4d2d] text-white rounded">Add Product</button>
             </div>
           </form>
         </div>
 
-        <!-- Category Filters - Modified to use URL encoding -->
-        <div class="category-filters mb-6">
+        <!-- Category Filters -->
+        <div class="flex overflow-x-auto gap-2 mb-6 pb-2">
           <?php foreach($categories as $key => $value): ?>
-            <a href="products.php?category=<?php echo urlencode($key); ?>" 
-               class="category-filter <?php echo ($selected_category == $key) ? 'active' : ''; ?>">
-              <?php echo $value; ?>
+            <a href="products.php?category=<?= urlencode($key) ?>" 
+               class="whitespace-nowrap px-4 py-2 rounded-full text-sm transition-colors
+                      <?= ($selected_category == $key) ? 'bg-[#ee4d2d] text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' ?>">
+              <?= $value ?>
             </a>
           <?php endforeach; ?>
         </div>
 
-        <!-- Products Table -->
-        <div class="bg-white rounded shadow-md overflow-hidden">
-          <div class="grid grid-cols-11 gap-2 bg-[#ee4d2d] p-4 font-semibold text-white text-sm uppercase text-center">
-            <div class="col-span-1">ID</div>
-            <div class="col-span-1">Image</div>
-            <div class="col-span-2">Name</div>
-            <div class="col-span-1">Price</div>
-            <div class="col-span-1">Qty</div>
-            <div class="col-span-3">Description</div>
-            <div class="col-span-2">Actions</div>
-          </div>
-          
-          <!-- Grid Content -->
+        <!-- Products Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           <?php 
           if ($products_result && $products_result->num_rows > 0) {
-            $current_category = '';
-            
-            // For 'all' view, group by category
-            if ($selected_category == 'all') {
-              while($product = $products_result->fetch_assoc()) {
-
-                
-                // Display product row
-                displayProductRow($product, $categories);
-              }
-            } else {
-              // Just show products for the selected category
-              while($product = $products_result->fetch_assoc()) {
-                displayProductRow($product, $categories);
-              }
+            while($product = $products_result->fetch_assoc()) {
+              displayProductCard($product, $categories);
             }
-          } else {
-          ?>
-            <div class="p-8 text-center text-gray-500">No products found</div>
+          } else { ?>
+            <div class="col-span-full p-8 text-center text-gray-500 bg-white rounded shadow">
+              <i class="fa-solid fa-box-open text-4xl mb-3 text-gray-400"></i>
+              <p class="text-lg">No products found</p>
+              <p class="text-sm mt-2">Try selecting a different category or add new products</p>
+            </div>
           <?php } ?>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Delete Confirmation Modal -->
-  <div id="deleteModal" class="modal-overlay">
-    <div class="modal-container p-6">
-      <div class="flex flex-col items-center text-center">
-        <div class="text-red-500 mb-4">
-          <i class="fa-solid fa-circle-exclamation text-5xl"></i>
-        </div>
+  <!-- Delete Modal -->
+  <div id="deleteModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-sm p-6 animate-fade-in-down">
+      <div class="text-center">
+        <div class="text-red-500 mb-4"><i class="fa-solid fa-circle-exclamation text-5xl"></i></div>
         <h3 class="text-xl font-bold mb-2">Confirm Delete</h3>
         <p class="text-gray-600 mb-6">Are you sure you want to delete <span id="deleteProductName" class="font-semibold"></span>? This action cannot be undone.</p>
-        <div class="flex gap-3 w-full">
-          <button id="cancelDelete" class="flex-1 py-2 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded">
-            Cancel
-          </button>
-          <a id="confirmDelete" href="#" class="flex-1 py-2 px-4 bg-red-500 hover:bg-red-600 text-white rounded text-center">
-            Delete
-          </a>
+        <div class="flex gap-3">
+          <button id="cancelDelete" class="flex-1 py-2 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded">Cancel</button>
+          <a id="confirmDelete" href="#" class="flex-1 py-2 px-4 bg-red-500 hover:bg-red-600 text-white rounded text-center">Delete</a>
         </div>
       </div>
     </div>
   </div>
 
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Edit Modal -->
+  <div id="editModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-lg p-6 animate-fade-in-down">
+      <div class="flex justify-between items-center mb-4 border-b pb-3">
+        <h3 class="text-xl font-bold">Edit Product</h3>
+        <button id="closeEditModal" class="text-gray-500 hover:text-gray-700"><i class="fa-solid fa-times"></i></button>
+      </div>
+      <div id="editFormContainer"><!-- Form loaded via JS --></div>
+    </div>
+  </div>
+
   <script src="https://kit.fontawesome.com/d5b7a13861.js" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-    <!-- JavaScript for mobile navigation toggle -->
-    <script>
+  <script>
+    // Mobile navigation
     document.addEventListener('DOMContentLoaded', function() {
       const mobileMenuBtn = document.getElementById('mobileMenuBtn');
       const closeMenuBtn = document.getElementById('closeMenuBtn');
       const mobileSidebar = document.getElementById('mobileSidebar');
       const mobileBackdrop = document.getElementById('mobileBackdrop');
       
-      function openMobileMenu() {
-        mobileSidebar.classList.remove('-translate-x-full');
-        mobileSidebar.classList.add('translate-x-0');
-        mobileBackdrop.classList.remove('hidden');
-        document.body.style.overflow = 'hidden';
-      }
+      const toggleMobileMenu = (show) => {
+        mobileSidebar.classList.toggle('translate-x-0', show);
+        mobileSidebar.classList.toggle('-translate-x-full', !show);
+        mobileBackdrop.classList.toggle('hidden', !show);
+        document.body.style.overflow = show ? 'hidden' : '';
+      };
       
-      function closeMobileMenu() {
-        mobileSidebar.classList.remove('translate-x-0');
-        mobileSidebar.classList.add('-translate-x-full');
-        mobileBackdrop.classList.add('hidden');
-        document.body.style.overflow = '';
-      }
-      
-      mobileMenuBtn.addEventListener('click', openMobileMenu);
-      closeMenuBtn.addEventListener('click', closeMobileMenu);
-      mobileBackdrop.addEventListener('click', closeMobileMenu);
+      mobileMenuBtn.addEventListener('click', () => toggleMobileMenu(true));
+      closeMenuBtn.addEventListener('click', () => toggleMobileMenu(false));
+      mobileBackdrop.addEventListener('click', () => toggleMobileMenu(false));
     });
-  </script>
-  <script>
-    // Configure toastr options
+
+    // Toastr configuration
     toastr.options = {
       closeButton: true,
       progressBar: true,
       positionClass: "toast-top-right",
-      timeOut: 3000,
-      extendedTimeOut: 1000,
-      showEasing: "swing",
-      hideEasing: "linear",
-      showMethod: "fadeIn",
-      hideMethod: "fadeOut"
+      timeOut: 3000
     };
     
     <?php if(isset($success_message)): ?>
-    toastr.success('<?php echo $success_message; ?>');
+    toastr.success('<?= $success_message ?>');
     <?php endif; ?>
     
     <?php if(isset($error_message)): ?>
-    toastr.error('<?php echo $error_message; ?>');
+    toastr.error('<?= $error_message ?>');
     <?php endif; ?>
     
     $(document).ready(function() {
       const deleteModal = document.getElementById('deleteModal');
+      const editModal = document.getElementById('editModal');
       const confirmDeleteBtn = document.getElementById('confirmDelete');
-      const cancelDeleteBtn = document.getElementById('cancelDelete');
       const deleteProductNameSpan = document.getElementById('deleteProductName');
+      const editFormContainer = document.getElementById('editFormContainer');
       
-      // Show add form
-      $('#showAddForm').click(function() {
-        $('#addFormContainer').slideDown();
-      });
-      
-      // Hide add form
-      $('#hideAddForm, #cancelAddForm').click(function() {
+      // Add form toggle
+      $('#showAddForm').click(() => $('#addFormContainer').slideDown());
+      $('#hideAddForm, #cancelAddForm').click(() => {
         $('#addFormContainer').slideUp();
-        // Optional: Reset the form
         $('#addProductForm')[0].reset();
       });
       
-      // Show edit form
-      $('.edit-btn').click(function() {
-        var productId = $(this).data('id');
-        $('#edit-form-' + productId).slideDown();
+      // Edit product
+      $('.edit-product-btn').click(function() {
+        const p = $(this).data();
+        
+        // Generate edit form HTML
+        const editFormHtml = `
+          <form action="" method="POST" enctype="multipart/form-data" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input type="hidden" name="edit_id" value="${p.id}">
+            
+            <div class="mb-2">
+              <label class="block text-sm font-medium mb-1">Current Image:</label>
+              <img src="../${p.image}" alt="${p.name}" class="w-32 h-32 object-cover rounded border">
+            </div>
+            
+            <div class="mb-2">
+              <label class="block text-sm font-medium mb-1">New Image (Optional):</label>
+              <input type="file" name="edit_image" accept="image/*" class="border p-2 rounded w-full">
+              <p class="text-xs text-gray-500 mt-1">Leave empty to keep current image</p>
+            </div>
+            
+            <div class="mb-2 md:col-span-2">
+              <label class="block text-sm font-medium mb-1">Product Name:</label>
+              <input type="text" name="edit_name" value="${p.name}" required class="border p-2 rounded w-full">
+            </div>
+            
+            <div class="mb-2">
+              <label class="block text-sm font-medium mb-1">Price:</label>
+              <input type="number" step="0.01" name="edit_price" value="${p.price}" required class="border p-2 rounded w-full">
+            </div>
+            
+            <div class="mb-2">
+              <label class="block text-sm font-medium mb-1">Quantity:</label>
+              <input type="number" name="edit_quantity" value="${p.quantity}" required class="border p-2 rounded w-full">
+            </div>
+            
+            <div class="mb-2 md:col-span-2">
+              <label class="block text-sm font-medium mb-1">Category:</label>
+              <select name="edit_category" required class="border p-2 rounded w-full">
+                <?php foreach($categories as $key => $value): ?>
+                  <?php if($key != 'all'): ?>
+                    <option value="<?= $key ?>"><?= $value ?></option>
+                  <?php endif; ?>
+                <?php endforeach; ?>
+              </select>
+            </div>
+            
+            <div class="mb-2 md:col-span-2">
+              <label class="block text-sm font-medium mb-1">Description:</label>
+              <textarea name="edit_description" required class="border p-2 rounded w-full" rows="4">${p.description}</textarea>
+            </div>
+            
+            <div class="md:col-span-2 flex justify-end gap-2 mt-2">
+              <button type="button" class="cancel-edit px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded">Cancel</button>
+              <button type="submit" name="edit_product" class="px-4 py-2 bg-[#ee4d2d] text-white rounded">Update Product</button>
+            </div>
+          </form>
+        `;
+        
+        // Insert form and show modal
+        editFormContainer.innerHTML = editFormHtml;
+        $('select[name="edit_category"]').val(p.category);
+        editModal.style.display = 'flex';
+        
+        // Cancel button
+        $('.cancel-edit').click(() => editModal.style.display = 'none');
       });
       
-      // Hide edit form
-      $('.cancel-edit-btn').click(function() {
-        var productId = $(this).data('id');
-        $('#edit-form-' + productId).slideUp();
-      });
+      // Close edit modal
+      document.getElementById('closeEditModal').addEventListener('click', () => editModal.style.display = 'none');
       
-      // Delete confirmation modal
-      $('.delete-btn').click(function() {
-        const productId = $(this).data('id');
-        const productName = $(this).data('name');
+      // Delete product
+      $('.delete-product-btn').click(function() {
+        const id = $(this).data('id');
+        const name = $(this).data('name');
         
-        // Update modal with product details
-        deleteProductNameSpan.textContent = productName;
-        // Use urlencode for the category parameter in the URL
-        confirmDeleteBtn.href = 'products.php?action=delete&id=' + productId + '&category=<?php echo urlencode($selected_category); ?>';
-        
-        // Show modal with fade effect
+        deleteProductNameSpan.textContent = name;
+        confirmDeleteBtn.href = `products.php?action=delete&id=${id}&category=<?= urlencode($selected_category) ?>`;
         deleteModal.style.display = 'flex';
-        setTimeout(() => {
-          deleteModal.style.opacity = '1';
-        }, 10);
       });
       
-      // Hide modal when cancel is clicked
-      cancelDeleteBtn.addEventListener('click', function() {
-        deleteModal.style.display = 'none';
-      });
+      // Cancel delete
+      document.getElementById('cancelDelete').addEventListener('click', () => deleteModal.style.display = 'none');
       
-      // Close modal when clicking outside
-      deleteModal.addEventListener('click', function(e) {
-        if (e.target === deleteModal) {
-          deleteModal.style.display = 'none';
-        }
+      // Close modals on outside click
+      window.addEventListener('click', (e) => {
+        if (e.target === deleteModal) deleteModal.style.display = 'none';
+        if (e.target === editModal) editModal.style.display = 'none';
       });
     });
   </script>
 </body>
 </html>
-
-<?php
-// Helper function to display product row and edit form
-function displayProductRow($product, $categories) {
-?>
-  <div class="grid grid-cols-11 gap-2 p-4 items-center border-b border-gray-200 hover:bg-gray-50 product-row" id="product-<?php echo $product['id']; ?>">
-    <div class="col-span-1 text-center"><?php echo $product['id']; ?></div>
-    <div class="col-span-1">
-      <img src="../<?php echo $product['image']; ?>" alt="<?php echo $product['name']; ?>" class="w-16 h-16 object-cover rounded">
-    </div>
-    <div class="col-span-2 font-medium"><?php echo $product['name']; ?></div>
-    <div class="col-span-1 text-center">₱<?php echo number_format($product['price'], 2); ?></div>
-    <div class="col-span-1 text-center"><?php echo $product['quantity']; ?></div>
-    <div class="col-span-3">
-      <div class="max-w-xs overflow-hidden text-ellipsis whitespace-nowrap" title="<?php echo htmlspecialchars($product['description']); ?>">
-        <?php echo htmlspecialchars(substr($product['description'], 0, 50)) . (strlen($product['description']) > 50 ? '...' : ''); ?>
-      </div>
-    </div>
-    <div class="col-span-2 flex gap-2 items-center justify-center">
-      <button type="button" class="px-3 py-1 bg-blue-100 text-blue-600 rounded hover:bg-blue-200 flex items-center edit-btn" data-id="<?php echo $product['id']; ?>">
-        <i class="fa-solid fa-pen-to-square mr-1"></i> Edit
-      </button>
-      <button type="button" class="px-3 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200 flex items-center delete-btn" 
-             data-id="<?php echo $product['id']; ?>" 
-             data-name="<?php echo htmlspecialchars($product['name']); ?>">
-        <i class="fa-solid fa-trash mr-1"></i> Delete
-      </button>
-    </div>
-  </div>
-  
-  <!-- Inline Edit Form -->
-  <div class="edit-form p-4 bg-gray-50 border-b border-gray-200" id="edit-form-<?php echo $product['id']; ?>">
-    <form action="" method="POST" enctype="multipart/form-data" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <input type="hidden" name="edit_id" value="<?php echo $product['id']; ?>">
-      
-      <div class="mb-2">
-        <label class="block text-sm font-medium mb-1">Current Image:</label>
-        <img src="../<?php echo $product['image']; ?>" alt="<?php echo $product['name']; ?>" class="w-24 h-24 object-cover rounded">
-      </div>
-      
-      <div class="mb-2">
-        <label class="block text-sm font-medium mb-1">New Image (optional):</label>
-        <input type="file" name="edit_image" accept="image/*" class="border p-1 rounded w-full text-sm">
-      </div>
-      
-      <div class="mb-2">
-        <label class="block text-sm font-medium mb-1">Product Name:</label>
-        <input type="text" name="edit_name" value="<?php echo htmlspecialchars($product['name']); ?>" required class="border p-1 rounded w-full">
-      </div>
-      
-      <div class="mb-2">
-        <label class="block text-sm font-medium mb-1">Price:</label>
-        <input type="number" step="0.01" name="edit_price" value="<?php echo $product['price']; ?>" required class="border p-1 rounded w-full">
-      </div>
-      
-      <div class="mb-2">
-        <label class="block text-sm font-medium mb-1">Quantity:</label>
-        <input type="number" name="edit_quantity" value="<?php echo $product['quantity']; ?>" required class="border p-1 rounded w-full">
-      </div>
-      
-      <div class="mb-2">
-        <label class="block text-sm font-medium mb-1">Category:</label>
-        <select name="edit_category" required class="border p-1 rounded w-full">
-          <?php 
-          // Skip the "all" option when editing a product
-          foreach($categories as $key => $value) {
-            if($key != 'all') {
-              $selected = ($key == $product['category']) ? 'selected' : '';
-              echo "<option value=\"$key\" $selected>$value</option>";
-            }
-          }
-          ?>
-        </select>
-      </div>
-      
-      <div class="mb-2 md:col-span-2">
-        <label class="block text-sm font-medium mb-1">Description:</label>
-        <textarea name="edit_description" required class="border p-1 rounded w-full" rows="3"><?php echo htmlspecialchars($product['description']); ?></textarea>
-      </div>
-      
-      <div class="md:col-span-2 flex gap-2 justify-end">
-        <button type="button" class="px-3 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200 flex items-center cancel-edit-btn" data-id="<?php echo $product['id']; ?>">
-          <i class="fa-solid fa-times mr-1"></i> Cancel
-        </button>
-        <button type="submit" name="edit_product" class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center">
-          <i class="fa-solid fa-save mr-1"></i> Save Changes
-        </button>
-      </div>
-    </form>
-  </div>
-<?php
-}
-?>
