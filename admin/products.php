@@ -158,44 +158,45 @@ if ($selected_category == 'all') {
 
 // Display product card function
 function displayProductCard($product, $categories) {
-    // Determine stock status for styling
-    $stockClass = $product['quantity'] <= 0 ? "text-red-500" : ($product['quantity'] <= 10 ? "text-yellow-500" : "text-green-500");
-    $stockText = $product['quantity'] <= 0 ? "Out of Stock" : ($product['quantity'] <= 10 ? "Low Stock: " . $product['quantity'] : "In Stock: " . $product['quantity']);
-    
-    // Category name and price formatting
-    $categoryName = isset($categories[$product['category']]) ? $categories[$product['category']] : $product['category'];
-    $formattedPrice = number_format($product['price'], 2);
-    ?>
-    <div class="bg-white rounded-lg overflow-hidden shadow hover:shadow-md transition-transform hover:-translate-y-1">
-        <div class="h-44 overflow-hidden relative">
-            <img src="../<?= htmlspecialchars($product['image']) ?>" alt="<?= htmlspecialchars($product['name']) ?>" class="w-full h-full object-cover transition-transform hover:scale-105">
-        </div>
-        <div class="p-4">
-            <h3 class="font-semibold text-base truncate"><?= htmlspecialchars($product['name']) ?></h3>
-            <div class="text-gray-600 text-xs mb-2"><?= htmlspecialchars($categoryName) ?></div>
-            <div class="font-bold text-[#ee4d2d] text-lg mb-1">$<?= $formattedPrice ?></div>
-            <div class="<?= $stockClass ?> text-xs mb-2"><?= $stockText ?></div>
-            <div class="text-gray-700 text-sm h-14 overflow-hidden line-clamp-3 mb-3"><?= htmlspecialchars($product['description']) ?></div>
-            <div class="flex gap-2">
-                <button class="edit-product-btn flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs flex justify-center items-center gap-1"
-                    data-id="<?= $product['id'] ?>"
-                    data-name="<?= htmlspecialchars($product['name']) ?>"
-                    data-price="<?= $product['price'] ?>"
-                    data-quantity="<?= $product['quantity'] ?>"
-                    data-description="<?= htmlspecialchars($product['description']) ?>"
-                    data-category="<?= htmlspecialchars($product['category']) ?>"
-                    data-image="<?= htmlspecialchars($product['image']) ?>">
-                    <i class="fa-solid fa-pen-to-square"></i> Edit
-                </button>
-                <button class="delete-product-btn flex-1 py-2 bg-red-500 hover:bg-red-600 text-white rounded text-xs flex justify-center items-center gap-1"
-                    data-id="<?= $product['id'] ?>"
-                    data-name="<?= htmlspecialchars($product['name']) ?>">
-                    <i class="fa-solid fa-trash"></i> Delete
-                </button>
-            </div>
-        </div>
-    </div>
-    <?php
+  // Determine category name for display
+  $categoryName = isset($categories[$product['category']]) ? $categories[$product['category']] : $product['category'];
+  $formattedPrice = number_format($product['price'], 2);
+  ?>
+  <div class="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-1 cursor-pointer no-underline text-inherit block">
+      <div class="relative pt-[100%] bg-gray-50 overflow-hidden">
+          <span class="absolute top-2 left-2 bg-black/50 text-white py-0.5 px-2 rounded text-xs">#<?= $product['id'] ?></span>
+          <span class="absolute bottom-2 right-2 bg-[#ee4d2d]/80 text-white py-0.5 px-2 rounded text-xs max-w-[70%] whitespace-nowrap overflow-hidden text-ellipsis"><?= htmlspecialchars($categoryName) ?></span>
+          <img src="../<?= htmlspecialchars($product['image']) ?>" alt="<?= htmlspecialchars($product['name']) ?>" class="absolute top-0 left-0 w-full h-full object-cover">
+      </div>
+      <div class="p-3">
+          <h3 class="font-medium mb-2 text-gray-800 line-clamp-2 h-10 truncate"><?= htmlspecialchars($product['name']) ?></h3>
+          <div class="font-semibold text-[#ee4d2d] text-base mb-1.5">$<?= $formattedPrice ?></div>
+          <div class="flex justify-between text-gray-500 text-xs">
+              <span><i class="fas fa-box"></i> <?= $product['quantity'] ?> in stock</span>
+          </div>
+          <div class="text-gray-600 text-xs mt-2 overflow-hidden text-ellipsis whitespace-nowrap" title="<?= htmlspecialchars($product['description']) ?>">
+              <?= htmlspecialchars(substr($product['description'], 0, 50)) . (strlen($product['description']) > 50 ? '...' : '') ?>
+          </div>
+          <div class="flex gap-2 mt-3">
+              <button class="edit-product-btn flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs flex justify-center items-center gap-1"
+                  data-id="<?= $product['id'] ?>"
+                  data-name="<?= htmlspecialchars($product['name']) ?>"
+                  data-price="<?= $product['price'] ?>"
+                  data-quantity="<?= $product['quantity'] ?>"
+                  data-description="<?= htmlspecialchars($product['description']) ?>"
+                  data-category="<?= htmlspecialchars($product['category']) ?>"
+                  data-image="<?= htmlspecialchars($product['image']) ?>">
+                  <i class="fa-solid fa-pen-to-square"></i> Edit
+              </button>
+              <button class="delete-product-btn flex-1 py-2 bg-red-500 hover:bg-red-600 text-white rounded text-xs flex justify-center items-center gap-1"
+                  data-id="<?= $product['id'] ?>"
+                  data-name="<?= htmlspecialchars($product['name']) ?>">
+                  <i class="fa-solid fa-trash"></i> Delete
+              </button>
+          </div>
+      </div>
+  </div>
+  <?php
 }
 ?>
 
@@ -459,59 +460,65 @@ function displayProductCard($product, $categories) {
       $('.edit-product-btn').click(function() {
         const p = $(this).data();
         
-        // Generate edit form HTML
-        const editFormHtml = `
-          <form action="" method="POST" enctype="multipart/form-data" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <input type="hidden" name="edit_id" value="${p.id}">
-            
-            <div class="mb-2">
-              <label class="block text-sm font-medium mb-1">Current Image:</label>
-              <img src="../${p.image}" alt="${p.name}" class="w-32 h-32 object-cover rounded border">
-            </div>
-            
-            <div class="mb-2">
-              <label class="block text-sm font-medium mb-1">New Image (Optional):</label>
-              <input type="file" name="edit_image" accept="image/*" class="border p-2 rounded w-full">
-              <p class="text-xs text-gray-500 mt-1">Leave empty to keep current image</p>
-            </div>
-            
-            <div class="mb-2 md:col-span-2">
-              <label class="block text-sm font-medium mb-1">Product Name:</label>
-              <input type="text" name="edit_name" value="${p.name}" required class="border p-2 rounded w-full">
-            </div>
-            
-            <div class="mb-2">
-              <label class="block text-sm font-medium mb-1">Price:</label>
-              <input type="number" step="0.01" name="edit_price" value="${p.price}" required class="border p-2 rounded w-full">
-            </div>
-            
-            <div class="mb-2">
-              <label class="block text-sm font-medium mb-1">Quantity:</label>
-              <input type="number" name="edit_quantity" value="${p.quantity}" required class="border p-2 rounded w-full">
-            </div>
-            
-            <div class="mb-2 md:col-span-2">
-              <label class="block text-sm font-medium mb-1">Category:</label>
-              <select name="edit_category" required class="border p-2 rounded w-full">
-                <?php foreach($categories as $key => $value): ?>
-                  <?php if($key != 'all'): ?>
-                    <option value="<?= $key ?>"><?= $value ?></option>
-                  <?php endif; ?>
-                <?php endforeach; ?>
-              </select>
-            </div>
-            
-            <div class="mb-2 md:col-span-2">
-              <label class="block text-sm font-medium mb-1">Description:</label>
-              <textarea name="edit_description" required class="border p-2 rounded w-full" rows="4">${p.description}</textarea>
-            </div>
-            
-            <div class="md:col-span-2 flex justify-end gap-2 mt-2">
-              <button type="button" class="cancel-edit px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded">Cancel</button>
-              <button type="submit" name="edit_product" class="px-4 py-2 bg-[#ee4d2d] text-white rounded">Update Product</button>
-            </div>
-          </form>
-        `;
+       // Generate edit form HTML
+const editFormHtml = `
+  <form action="" method="POST" enctype="multipart/form-data" class="max-h-[80vh] overflow-y-auto">
+    <input type="hidden" name="edit_id" value="${p.id}">
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="mb-2">
+        <label class="block text-sm font-medium mb-1">Current Image:</label>
+        <div class="bg-gray-50 p-2 rounded flex justify-center">
+          <img src="../${p.image}" alt="${p.name}" class="h-32 object-contain rounded">
+        </div>
+      </div>
+      
+      <div class="mb-2">
+        <label class="block text-sm font-medium mb-1">New Image (Optional):</label>
+        <input type="file" name="edit_image" accept="image/*" class="border p-2 rounded w-full text-sm">
+        <p class="text-xs text-gray-500 mt-1">Leave empty to keep current image</p>
+      </div>
+    </div>
+    
+    <div class="mt-4">
+      <label class="block text-sm font-medium mb-1">Product Name:</label>
+      <input type="text" name="edit_name" value="${p.name}" required class="border p-2 rounded w-full">
+    </div>
+    
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+      <div>
+        <label class="block text-sm font-medium mb-1">Price:</label>
+        <input type="number" step="0.01" name="edit_price" value="${p.price}" required class="border p-2 rounded w-full">
+      </div>
+      
+      <div>
+        <label class="block text-sm font-medium mb-1">Quantity:</label>
+        <input type="number" name="edit_quantity" value="${p.quantity}" required class="border p-2 rounded w-full">
+      </div>
+    </div>
+    
+    <div class="mt-4">
+      <label class="block text-sm font-medium mb-1">Category:</label>
+      <select name="edit_category" required class="border p-2 rounded w-full">
+        <?php foreach($categories as $key => $value): ?>
+          <?php if($key != 'all'): ?>
+            <option value="<?= $key ?>"><?= $value ?></option>
+          <?php endif; ?>
+        <?php endforeach; ?>
+      </select>
+    </div>
+    
+    <div class="mt-4">
+      <label class="block text-sm font-medium mb-1">Description:</label>
+      <textarea name="edit_description" required class="border p-2 rounded w-full" rows="3">${p.description}</textarea>
+    </div>
+    
+    <div class="flex justify-end gap-3 mt-6 pt-4 border-t">
+      <button type="button" class="cancel-edit px-5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded font-medium">Cancel</button>
+      <button type="submit" name="edit_product" class="px-5 py-2 bg-[#ee4d2d] hover:bg-[#dd3c1c] text-white rounded font-medium transition">Update Product</button>
+    </div>
+  </form>
+`;
         
         // Insert form and show modal
         editFormContainer.innerHTML = editFormHtml;
