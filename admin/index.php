@@ -5,6 +5,19 @@ include("../connections.php");
 if (!isset($connections)) {
     die("Database connection error.");
 }
+
+// Check if the user is logged in and their account_type
+if (!isset($_SESSION['account_type'])) {
+  // Not logged in? Redirect to login or index page
+  header("Location: /php/index.php");
+  exit();
+}
+
+// If the user is of type 2 (normal user), redirect them away from admin
+if ($_SESSION['account_type'] == "2") {
+  header("Location: /php/user/index.php");
+  exit();
+}
 ?>
 
 <!DOCTYPE html>
