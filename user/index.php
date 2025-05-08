@@ -759,11 +759,11 @@ function displayProductCard($product, $categories, $selected_category) {
      class="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-1 cursor-pointer no-underline text-inherit block" 
      id="product-<?php echo $product['id']; ?>">
     <div class="relative pt-[100%] bg-gray-50 overflow-hidden">
-      <span class="absolute top-2 left-2 bg-black/50 text-white py-0.5 px-2 rounded text-xs">#<?php echo $product['id']; ?></span>
+      <span class="absolute top-2 left-2 bg-black/50 text-white py-0.5 px-2 rounded text-xs z-10">#<?php echo $product['id']; ?></span>
       <?php if ($selected_category == 'all'): ?>
-        <span class="absolute bottom-2 right-2 bg-chopee/80 text-white py-0.5 px-2 rounded text-xs max-w-[70%] whitespace-nowrap overflow-hidden text-ellipsis"><?php echo $category_display_name; ?></span>
+        <span class="absolute bottom-2 right-2 bg-chopee/80 text-white py-0.5 px-2 rounded text-xs max-w-[70%] whitespace-nowrap overflow-hidden text-ellipsis z-10"><?php echo $category_display_name; ?></span>
       <?php endif; ?>
-      <img src="../<?php echo $product['image']; ?>" alt="<?php echo $product['name']; ?>" class="absolute top-0 left-0 w-full h-full object-cover">
+      <img src="../<?php echo $product['image']; ?>" alt="<?php echo $product['name']; ?>" class="absolute top-0 left-0 z-0 w-full h-full object-cover">
     </div>
     <div class="p-3">
       <h3 class="font-medium mb-2 text-gray-800 line-clamp-2"><?php echo $product['name']; ?></h3>
