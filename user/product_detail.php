@@ -520,7 +520,7 @@ if ($user_id !== null) {
             <img src="../<?php echo $similar_product['image']; ?>" alt="<?php echo $similar_product['name']; ?>" class="absolute top-0 left-0 w-full h-full object-cover">
           </div>
           <div class="p-3">
-            <h3 class="font-medium mb-2 text-gray-800 line-clamp-2 h-10 overflow-hidden"><?php echo $similar_product['name']; ?></h3>
+            <h3 class="font-medium mb-2 text-gray-800 line-clamp-2 min-h-12"><?php echo $similar_product['name']; ?></h3>
             <div class="font-semibold text-chopee-500 text-base mb-1.5">₱<?php echo number_format($similar_product['price'], 2); ?></div>
             <div class="text-gray-600 text-sm">
               <span><i class="fas fa-box"></i> <?php echo $similar_product['quantity']; ?> in stock</span>

@@ -170,7 +170,7 @@ function displayProductCard($product, $categories) {
           <img src="../<?= htmlspecialchars($product['image']) ?>" alt="<?= htmlspecialchars($product['name']) ?>" class="absolute top-0 left-0 w-full h-full object-cover">
       </div>
       <div class="p-3">
-          <h3 class="font-medium mb-2 text-gray-800 line-clamp-2"><?= htmlspecialchars($product['name']) ?></h3>
+          <h3 class="font-medium mb-2 text-gray-800 line-clamp-2 min-h-12"><?= htmlspecialchars($product['name']) ?></h3>
           <div class="font-semibold text-[#ee4d2d] text-base mb-1.5">₱<?= $formattedPrice ?></div>
           <div class="flex justify-between text-gray-500 text-xs">
               <span><i class="fas fa-box"></i> <?= $product['quantity'] ?> in stock</span>
