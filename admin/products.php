@@ -408,6 +408,22 @@ function displayProductCard($product, $categories) {
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
   <script>
+// Save scroll position before form submission (before page unload)
+window.addEventListener('beforeunload', function() {
+    localStorage.setItem('scrollPosition', window.scrollY); // Save the current scroll position
+});
+
+// Restore scroll position after page reload
+document.addEventListener('DOMContentLoaded', function() {
+    const savedScroll = localStorage.getItem('scrollPosition');
+    if (savedScroll) {
+        window.scrollTo(0, savedScroll); // Restore scroll position
+        localStorage.removeItem('scrollPosition'); // Clean up after restoring the scroll position
+    }
+});
+</script>
+
+  <script>
     // Mobile navigation
     document.addEventListener('DOMContentLoaded', function() {
       const mobileMenuBtn = document.getElementById('mobileMenuBtn');
@@ -520,7 +536,7 @@ const editFormHtml = `
     </div>
   </form>
 `;
-        
+
         // Insert form and show modal
         editFormContainer.innerHTML = editFormHtml;
         $('select[name="edit_category"]').val(p.category);
